@@ -1,4 +1,9 @@
 # Uplink Server Deployment
+# Automatic Deployment
+1. Run the **deploy.sh** script from your local machine, have the sudo password ready
+2. Enter ssh authentication when prompted, as well as sudo password to restart the mattermost process
+3. Mattermost should be redeployed once the script finishes and ssh is terminated. 
+# Manual Deployment
 1. Ssh into uplink-common@rhombi.mit.edu, make sure you have your Kerb tickets. 
 2. In **~/uplink-server**, run **make build**
 3. Afterwards, run **make package**

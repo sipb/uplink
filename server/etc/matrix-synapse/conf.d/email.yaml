@@ -1,0 +1,21 @@
+# Source:
+# https://matrix-org.github.io/synapse/latest/setup/installation.html#email
+# https://matrix-org.github.io/synapse/latest/usage/configuration/config_documentation.html#email
+
+# I can't get it to work...
+email:
+  smtp_host: outgoing.mit.edu
+  smtp_port: 587 #587,465,25
+  # TODO: do the full address
+  # i.e. "Matrix notifications <matrix@mit.edu>"
+  # or something...
+  notif_from: "matrix@mit.edu"
+  require_transport_security: true
+  enable_tls: true
+  #force_tls: true
+  app_name: Uplink
+  # TODO: change client_base_url
+
+  # I think it's like Discord--it emails you messages you have not seen
+  enable_notifs: true
+

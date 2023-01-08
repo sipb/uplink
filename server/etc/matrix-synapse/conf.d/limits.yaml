@@ -1,0 +1,5 @@
+# TODO: remove these limits after upgrading to physical server
+
+limit_remote_rooms:
+  enabled: true
+  complexity_error: "Our test server is still too weak for that, sorry. Coming soon"

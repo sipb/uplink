@@ -1,0 +1,104 @@
+# Config file for everything accounts
+
+allow_guest_access: false
+enable_registration: false # Disabled because Touchstone should work...
+
+# Allow users to lookup people by their names, kerbs, etc
+user_directory:
+  enabled: true
+  search_all_users: true
+  prefer_local_users: true
+
+# Delegate sending SMS to identity server
+# This would work if there was an identity server that
+# actually sent SMS
+#account_threepid_delegates:
+#  msisdn: https://vector.im
+
+# Don't let people remove their email or add a phone number
+# Ideally, I'd just change it to only disallow removing your own kerb, but I think this is enough
+enable_3pid_changes: false
+
+# oop inconsistent naming, why do you call it threepid up and 3pid down?
+
+registrations_require_3pid:
+  - email
+# Only allow MIT emails
+# I guess we should disable this once SSO is enabled
+# because we *may* want to have guests (i.e. if there is a 2028 Matrix instead of Discord)
+# also because this is AT ALL and not just during registration! (https://github.com/matrix-org/synapse/issues/8696)
+allowed_local_3pids:
+  - medium: email
+    pattern: '^[^@]+@mit\.edu$'
+  - medium: msisdn
+    pattern: '.+'
+
+password_config:
+  enabled: false # Disable password authentication
+
+sso:
+  client_whitelist:
+    - https://uplink.mit.edu/
+    - https://app.cinny.in/
+    - https://app.element.io/
+    - https://fluffychat.im/
+  # I'm not adding the mobile ones because a malicious app could register the URL schemes
+
+# OpenID connect pilot
+#oidc_providers:
+#  - idp_id: oidc
+#    idp_name: kerb
+#    issuer: 'https://oidc.mit.edu'
+#    client_id: '2e318e5c-0303-48ab-ab1c-b513878e4543'
+#    client_secret: 'AK2TeIiCwjzMKMMIs6-RVaWEVOIkur-iJNRRgebXfXECApKN62eF30cMRhXAanuQdx3sUm6_G2XvCSHxX14hfUo'
+#    scopes: ['email', 'openid', 'profile'] # removed openid because i can't get token validation to work atm. update: can't remove, because then userinfo returns forbidden
+#    client_auth_method: client_secret_post
+#    allow_existing_users: true # for ppl who signed up with email
+#    user_profile_method: userinfo_endpoint
+#    user_mapping_provider:
+#      config:
+#        localpart_template: "{{ user.email|localpart_from_email }}"
+#        confirm_localpart: false 
+#        display_name_template: "{{ user.name }}"
+#        email_template: "{{ user.email }}"
+
+# Touchstone
+# Useful source apart form official docs: https://nickx.hu/posts/2020-07-13-matrix-synapse-shibboleth-saml.html
+saml2_config:
+  sp_config:
+    metadata:
+      remote:
+        - url: 'https://touchstone.mit.edu/metadata/MIT-metadata.xml'
+          cert: /etc/shibboleth/mit-md-cert.pem
+    key_file: /etc/shibboleth/sp-signing-key.pem
+    cert_file: /etc/shibboleth/sp-signing-cert.pem
+    encryption_keypairs:
+      - key_file: /etc/shibboleth/sp-encrypt-key.pem
+        cert_file: /etc/shibboleth/sp-encrypt-cert.pem
+    entityid: 'https://uplink.mit.edu/shibboleth'
+    verify_ssl_cert: true
+    accepted_time_diff: 3
+    service:
+      sp:
+        allow_unsolicited: true
+        endpoints:
+          assertion_consumer_service:
+            - 'https://uplink.mit.edu/Shibboleth.sso/SAML2/POST'
+        required_attributes:
+          - affiliation
+          - eppn
+          - email
+          - displayName 
+        optional_attributes:
+          - memberOf
+        allow_unknown_attributes: true 
+    attribute_map_dir: /etc/matrix-synapse/saml2-attribute-maps
+  user_mapping_provider:
+    module: matrix_saml_strip_hostname.mapping_providers.StripHostnameSamlMappingProvider
+    config:
+      # The displayName and email are hardcoded to displayName and email, respectively
+      # so no need to set here
+      mxid_source_attribute: email
+  idp_entityid: 'https://idp.mit.edu/shibboleth'
+  # Could add a check too (attribute_requirements) so that only emails ending in mit.edu (or alum.mit.edu, i guess?) work
+  # actually, since it redirects to touchstone (and not wayf.mit.edu), I think it should be fine...

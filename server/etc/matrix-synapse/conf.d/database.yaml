@@ -1,0 +1,9 @@
+database:
+  name: psycopg2
+  args:
+    user: synapse_user
+    database: synapse
+    host: localhost
+    cp_min: 5
+    cp_max: 10
+

@@ -1,0 +1,33 @@
+# Configuration file for Synapse.
+#
+# This is a YAML file: see [1] for a quick introduction. Note in particular
+# that *indentation is important*: all the elements of a list or dictionary
+# should have the same indentation.
+#
+# [1] https://docs.ansible.com/ansible/latest/reference_appendices/YAMLSyntax.html
+#
+# For more information on how to configure Synapse, including a complete accounting of
+# each option, go to docs/usage/configuration/config_documentation.md or
+# https://matrix-org.github.io/synapse/latest/usage/configuration/config_documentation.html
+#
+# This is set in /etc/matrix-synapse/conf.d/server_name.yaml for Debian installations.
+# server_name: "SERVERNAME"
+pid_file: "/var/run/matrix-synapse.pid"
+listeners:
+  - port: 8008
+    tls: false
+    type: http
+    x_forwarded: true
+    bind_addresses: ['::1', '127.0.0.1']
+    resources:
+      - names: [client, federation]
+        compress: false
+database:
+  name: sqlite3
+  args:
+    database: /var/lib/matrix-synapse/homeserver.db
+log_config: "/etc/matrix-synapse/log.yaml"
+media_store_path: /var/lib/matrix-synapse/media
+signing_key_path: "/etc/matrix-synapse/homeserver.signing.key"
+trusted_key_servers:
+  - server_name: "matrix.org"

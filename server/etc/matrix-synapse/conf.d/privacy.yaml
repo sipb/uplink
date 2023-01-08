@@ -1,0 +1,13 @@
+# Privacy-related settings
+# TODO: think about them and change them
+
+require_auth_for_profile_requests: true # default false
+allow_profile_lookup_over_federation: true # default true
+limit_profile_requests_to_users_who_share_rooms: false # default false
+allow_public_rooms_over_federation: false # default false
+allow_device_name_lookup_over_federation: false # default false
+
+# Prevent leaking the directory, just in case
+inhibit_user_in_use_error: true # default false
+request_token_inhibit_3pid_errors: true # default false
+

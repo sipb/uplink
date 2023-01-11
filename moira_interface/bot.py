@@ -4,7 +4,7 @@ from canvas_class import Class
 from moira import MoiraAPI
 import asyncio
 import json
-from nio import AsyncClient, MatrixRoom, RoomMessageText, RoomVisibility, RoomCreateError, RoomCreateResponse
+from nio import AsyncClient, MatrixRoom, RoomMessageText, RoomVisibility, RoomCreateError, RoomCreateResponse, Api
 
 moira = MoiraAPI()
 
@@ -32,7 +32,11 @@ def class_channel_exists(canvas_class: Class|str):
     """
     if isinstance(canvas_class, str):
         canvas_class = Class(canvas_class)
-    # IDK how to do this (TODO: figure it out)
+    # TODO: do this, define channel exists in general
+    # https://matrix.org/docs/api/#get-/_matrix/client/v3/directory/room/-roomAlias-
+    # client.room_resolve_alias
+    # https://matrix.org/docs/api/#get-/_matrix/client/v3/directory/list/room/-roomId-
+    # client.room_get_visibility
 
 async def message_callback(room: MatrixRoom, event: RoomMessageText) -> None:
     async def send_message(msg, type='m.text'):

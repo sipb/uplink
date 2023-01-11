@@ -76,8 +76,16 @@ class Class:
         """
         # Note that Matrix allows more than one room alias
         # For now, one should be enough
+        # TODO: generate something more sensible like 11.002-FA22
         assert self.mailing_list is not None
         return self.mailing_list
+
+    def get_room_name(self):
+        """
+        Programatically generate a room name
+        """
+        # TODO: generate something more sensible like 11.001 (Fall 22-23)
+        return self.name
 
     @staticmethod
     def get_list_from_mailing_lists(lists: list[str]):

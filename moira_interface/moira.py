@@ -36,8 +36,9 @@ class MoiraAPI(Moira):
         )
         return [ListMember.from_json(json) for json in dicts]
 
-    # TODO: implement some parsing as in mailing_list_csv_to_json.py
-    # (Parse kerberos principals and the like and turn them all into kerbs)
+    # TODO: accept input from above command instead of re-calling the function
+    # or make the above function return a special class with a method to do this (better)
+    # TODO: also add another method to the class to get email addresses (filter by valid email address)
     def get_all_mit_members_of_list(self, name: str):
         members = self.get_all_members_of_list(name, True)
         mit_members = set() # instead of list, to prevent duplicates

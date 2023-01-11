@@ -1,0 +1,7 @@
+__pycache__
+personal.cert
+personal.key
+prefs.json
+config.json
+session.txt
+store

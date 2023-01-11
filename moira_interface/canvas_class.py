@@ -69,6 +69,16 @@ class Class:
         else:
             return f'Class(name={self.name}, academic_year={self.academic_year}, term={self.term}, role={self.role})'
 
+    def get_room_alias(self):
+        """
+        Programatically generate a channel name for the given class
+        This is customizable, for now just the mailing list name
+        """
+        # Note that Matrix allows more than one room alias
+        # For now, one should be enough
+        assert self.mailing_list is not None
+        return self.mailing_list
+
     @staticmethod
     def get_list_from_mailing_lists(lists: list[str]):
         return [Class(l) for l in lists if l.startswith('canvas-')]

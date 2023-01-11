@@ -38,3 +38,21 @@ class MoiraAPI(Moira):
 
     # TODO: implement some parsing as in mailing_list_csv_to_json.py
     # (Parse kerberos principals and the like and turn them all into kerbs)
+    def get_all_mit_members_of_list(self, name: str):
+        members = self.get_all_members_of_list(name, True)
+        mit_members = set() # instead of list, to prevent duplicates
+        
+        # Copied from old/mailing_list_csv_to_json.py
+        for user_type, user_string in ((member.type, member.member) for member in members):
+            if user_type=="USER":
+                mit_members.add(user_string)
+            elif user_type=="KERBEROS":
+                if "/" in user_string:
+                    kerb, extension = user_string.split("/")
+                    if extension=="root@ATHENA.MIT.EDU":
+                        mit_members.add(kerb)
+                else:
+                    kerb, extension = user_string.split("@")
+                    if extension=="ATHENA.MIT.EDU" or extension=="MIT.EDU":
+                        mit_members.add(kerb)
+        return mit_members

@@ -44,6 +44,8 @@ asyncio.get_event_loop().run_until_complete(main())
 
 # moira = MoiraAPI()
 
-# # print(moira.get_all_members_of_list('ec-discuss'))
-# lists = moira.user_lists('rgabriel')
-# print([str(c) for c in Class.get_list_from_mailing_lists(lists)])
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass

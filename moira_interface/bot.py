@@ -4,7 +4,9 @@ from canvas_class import Class
 from moira import MoiraAPI
 import asyncio
 import json
-from nio import AsyncClient, MatrixRoom, RoomMessageText, RoomVisibility, RoomCreateError, RoomCreateResponse, Api
+from nio import AsyncClient, MatrixRoom, RoomMessageText, RoomVisibility, RoomCreateError, RoomCreateResponse, Api, GetOpenIDTokenResponse
+import requests # TODO: remove once this is handled from nio
+import json # likewise
 
 moira = MoiraAPI()
 
@@ -38,6 +40,31 @@ def class_channel_exists(canvas_class: Class|str):
     # https://matrix.org/docs/api/#get-/_matrix/client/v3/directory/list/room/-roomId-
     # client.room_get_visibility
 
+# TODO: this should be handled from nio
+async def get_id_access_token() -> str:
+    url = f"https://{config['id_server']}/_matrix/identity/v2/account/register"
+    token = await client.get_openid_token(config['username'])
+    assert isinstance(token, GetOpenIDTokenResponse)
+    result = requests.post(url, json=dict(
+        access_token=token.access_token,
+        token_type="Bearer",
+        matrix_server_name=config['server_name'],
+        expires_in=token.expires_in,
+    ))
+    return json.loads(result.content)['access_token']
+
+
+async def accept_identity_server_terms() -> requests.Response:
+    # Get terms from https://matrix.org/_matrix/identity/v2/terms
+    urls = ['https://matrix.org/legal/identity-server-privacy-notice-1']
+    result = requests.post(
+        url=f"https://{config['id_server']}/_matrix/identity/v2/terms",
+        json={'user_accepts': urls},
+        headers={'Authorization': f'Bearer {await get_id_access_token()}'},
+    )
+    return result
+
+
 async def message_callback(room: MatrixRoom, event: RoomMessageText) -> None:
     async def send_message(msg, type='m.text'):
         await client.room_send(
@@ -45,7 +72,6 @@ async def message_callback(room: MatrixRoom, event: RoomMessageText) -> None:
             message_type='m.room.message',
             content={'msgtype': type, 'body': msg}
         )
-    
     # ignore messages from self
     if event.sender == client.user:
         return
@@ -62,6 +88,14 @@ async def message_callback(room: MatrixRoom, event: RoomMessageText) -> None:
         await send_message(str(attributes), 'm.notice')
     # TODO: follow list access control stuff
     # and remove these commands which are just for debugging purposes
+    if msg.startswith('!idtoken'):
+        token = await get_id_access_token()
+        print(token)
+        await send_message(str(token))
+    if msg.startswith('!acceptterms'):
+        await send_message('on it!', 'm.notice')
+        response = await accept_identity_server_terms()
+        await send_message(f'{response} {response.content.decode()}', 'm.notice')
     if msg.startswith('!listmembers'):
         list_name = msg.split(' ')[1]
         members, invites = moira.get_members_of_list_by_type(list_name)
@@ -71,18 +105,31 @@ async def message_callback(room: MatrixRoom, event: RoomMessageText) -> None:
         await send_message(f'Creating room for list {list_name}', 'm.notice')
         attributes = moira.list_attributes(list_name)
         members, invites = moira.get_members_of_list_by_type(list_name)
+        # TODO: restore /home/rgabriel/.local/lib/python3.10/site-packages/nio.bak into nio when the PR is merged
+
+        # How to get id_access_token for now? I don't think nio can interface with identity servers
+        # first get token via await client.get_openid_token(config['username'])
+        # curl -d '{"access_token": "TOKEN_GOES_HERE", "token_type": "Bearer", "matrix_server_name": "uplink.mit.edu", "expires_in": 60}' -H "Content-Type: application/json" "https://matrix.org/_matrix/identity/v2/account/register"
         response = await client.room_create(
             visibility=RoomVisibility.private if attributes['hiddenList'] or not attributes['publicList'] else RoomVisibility.public,
             alias=list_name,
             name=list_name, # For now
             topic=attributes['description'],
-            invite=[f'@{member}:uplink.mit.edu' for member in members], # Hardcoded for now (TODO: fix)
+            invite=[f"@{member}:{config['server_name']}" for member in members],
+            invite_3pid=[
+                dict(
+                    address=email,
+                    id_access_token=await get_id_access_token(),
+                    id_server=config['id_server'],
+                    medium='email'
+                )
+                for email in invites
+            ],
         )
         # TODO: everyone is invited whether they haven't logged into Uplink or not
         # if they haven't and then they join, do their invites appear?
         # Can invites be sent again or are they lost forever?
-
-        # Ohhh matrix defines invite_3pid (would need pull request to matrix-nio)
+        # (FOR OWN USERS)
         print(response)
         if isinstance(response, RoomCreateResponse):
             await send_message('done!', 'm.notice')
@@ -98,6 +145,10 @@ async def message_callback(room: MatrixRoom, event: RoomMessageText) -> None:
                 await send_message(f'There was an error creating the room for list {list_name}')
                 await send_message(str(response), 'm.notice')
         # TODO: also give room admin to the mailing list admins...
+    if msg.startswith('!removealias') and event.sender == '@rgabriel:uplink.mit.edu':
+        list_name = msg.split(' ')[1]
+        response = await client.room_delete_alias(f'#{list_name}:uplink.mit.edu')
+        await send_message(str(response), 'm.notice')
         
 
 async def main() -> None:

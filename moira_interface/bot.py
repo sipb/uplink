@@ -4,9 +4,9 @@ from canvas_class import Class
 from moira import MoiraAPI
 import asyncio
 import json
-from nio import AsyncClient, MatrixRoom, RoomMessageText, RoomVisibility, RoomCreateError, RoomCreateResponse, Api, GetOpenIDTokenResponse
-import requests # TODO: remove once this is handled from nio
-import json # likewise
+from nio import AsyncClient, MatrixRoom, RoomMessageText, RoomVisibility, RoomCreateError, RoomCreateResponse, Api, GetOpenIDTokenResponse, RoomPreset
+import requests  # TODO: remove once this is handled from nio
+import json  # likewise
 
 moira = MoiraAPI()
 
@@ -26,7 +26,8 @@ client.access_token = config['token']
 #   something else?
 # Also for classes, do we want them to be public so people can add themselves?
 
-def class_channel_exists(canvas_class: Class|str):
+
+def class_channel_exists(canvas_class: Class | str):
     """
     Does a class channel exist for the given Canvas class?
 
@@ -41,6 +42,9 @@ def class_channel_exists(canvas_class: Class|str):
     # client.room_get_visibility
 
 # TODO: this should be handled from nio
+# and fix this issue: https://github.com/poljar/matrix-nio/issues/375
+
+
 async def get_id_access_token() -> str:
     url = f"https://{config['id_server']}/_matrix/identity/v2/account/register"
     token = await client.get_openid_token(config['username'])
@@ -65,6 +69,8 @@ async def accept_identity_server_terms() -> requests.Response:
     return result
 
 
+# TODO: exception handling
+# for instance, currently crashes if you try to create a list room for a list that doesn't exist
 async def message_callback(room: MatrixRoom, event: RoomMessageText) -> None:
     async def send_message(msg, type='m.text'):
         await client.room_send(
@@ -80,7 +86,8 @@ async def message_callback(room: MatrixRoom, event: RoomMessageText) -> None:
         await send_message('Pong!')
     if msg.startswith('!myclasses'):
         lists = moira.user_lists('rgabriel')
-        classes = [str(c) for c in Class.get_list_from_mailing_lists(lists) if c.mailing_list.startswith('canvas-2023')]
+        classes = [str(c) for c in Class.get_list_from_mailing_lists(
+            lists) if c.mailing_list.startswith('canvas-2023')]
         await send_message('\n'.join(classes), 'm.notice')
     if msg.startswith('!listinfo'):
         list_name = msg.split(' ')[1]
@@ -105,15 +112,12 @@ async def message_callback(room: MatrixRoom, event: RoomMessageText) -> None:
         await send_message(f'Creating room for list {list_name}', 'm.notice')
         attributes = moira.list_attributes(list_name)
         members, invites = moira.get_members_of_list_by_type(list_name)
-        # TODO: restore /home/rgabriel/.local/lib/python3.10/site-packages/nio.bak into nio when the PR is merged
-
-        # How to get id_access_token for now? I don't think nio can interface with identity servers
-        # first get token via await client.get_openid_token(config['username'])
-        # curl -d '{"access_token": "TOKEN_GOES_HERE", "token_type": "Bearer", "matrix_server_name": "uplink.mit.edu", "expires_in": 60}' -H "Content-Type: application/json" "https://matrix.org/_matrix/identity/v2/account/register"
+        # TODO: restore /home/rgabriel/.local/lib/python3.10/site-packages/nio.bak into nio when the PR (TBD) is merged
         response = await client.room_create(
-            visibility=RoomVisibility.private if attributes['hiddenList'] or not attributes['publicList'] else RoomVisibility.public,
+            visibility=RoomVisibility.private if attributes[
+                'hiddenList'] or not attributes['publicList'] else RoomVisibility.public,
             alias=list_name,
-            name=list_name, # For now
+            name=list_name,  # For now
             topic=attributes['description'],
             invite=[f"@{member}:{config['server_name']}" for member in members],
             invite_3pid=[
@@ -125,6 +129,7 @@ async def message_callback(room: MatrixRoom, event: RoomMessageText) -> None:
                 )
                 for email in invites
             ],
+            preset=RoomPreset.trusted_private_chat, # this gives people perms (for now)
         )
         # TODO: everyone is invited whether they haven't logged into Uplink or not
         # if they haven't and then they join, do their invites appear?
@@ -132,7 +137,7 @@ async def message_callback(room: MatrixRoom, event: RoomMessageText) -> None:
         # (FOR OWN USERS)
         print(response)
         if isinstance(response, RoomCreateResponse):
-            await send_message('done!', 'm.notice')
+            await send_message('room has been created!', 'm.notice')
         else:
             assert isinstance(response, RoomCreateError)
             if response.status_code == 'M_ROOM_IN_USE':
@@ -145,11 +150,22 @@ async def message_callback(room: MatrixRoom, event: RoomMessageText) -> None:
                 await send_message(f'There was an error creating the room for list {list_name}')
                 await send_message(str(response), 'm.notice')
         # TODO: also give room admin to the mailing list admins...
+        # i can't find the API to do that!! Aaaa
+        # https://github.com/matrix-org/matrix-react-sdk/blob/d835721ae1dd005b7c0ba5b4b2448f5396128e1a/src/components/views/settings/AddPrivilegedUsers.tsx
+        # I went to weblab for 15 minutes about react so i vaguely understand it but hm, no idea
+        # https://github.com/matrix-org/matrix-js-sdk/blob/185ded4ebc259d35f6c4c4945a68dba793703519/src/client.ts#L4089 
+        # ok this the JS client not react, now i know
+        # /rooms/$roomId/state/m.room.power_levels
+        # https://matrix.org/docs/api/#put-/_matrix/client/v3/rooms/-roomId-/state/-eventType-/-stateKey-
+        # https://spec.matrix.org/v1.5/client-server-api/#mroompower_levels
+
+
+        
     if msg.startswith('!removealias') and event.sender == '@rgabriel:uplink.mit.edu':
         list_name = msg.split(' ')[1]
         response = await client.room_delete_alias(f'#{list_name}:uplink.mit.edu')
         await send_message(str(response), 'm.notice')
-        
+
 
 async def main() -> None:
     # This line is important, so it doesn't reply to old messages on restart...

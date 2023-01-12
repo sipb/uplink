@@ -62,15 +62,15 @@ async def message_callback(room: MatrixRoom, event: RoomMessageText) -> None:
         await send_message(str(attributes), 'm.notice')
     # TODO: follow list access control stuff
     # and remove these commands which are just for debugging purposes
-    if msg.startswith('!listmitmembers'):
+    if msg.startswith('!listmembers'):
         list_name = msg.split(' ')[1]
-        members = moira.get_all_mit_members_of_list(list_name)
-        await send_message('\n'.join(members), 'm.notice')
+        members, invites = moira.get_members_of_list_by_type(list_name)
+        await send_message('\n'.join(list(members) + list(invites)), 'm.notice')
     if msg.startswith('!createlistroom'):
         list_name = msg.split(' ')[1]
         await send_message(f'Creating room for list {list_name}', 'm.notice')
         attributes = moira.list_attributes(list_name)
-        members = moira.get_all_mit_members_of_list(list_name)
+        members, invites = moira.get_members_of_list_by_type(list_name)
         response = await client.room_create(
             visibility=RoomVisibility.private if attributes['hiddenList'] or not attributes['publicList'] else RoomVisibility.public,
             alias=list_name,

@@ -36,13 +36,17 @@ class MoiraAPI(Moira):
         )
         return [ListMember.from_json(json) for json in dicts]
 
-    # TODO: accept input from above command instead of re-calling the function
-    # or make the above function return a special class with a method to do this (better)
-    # TODO: also add another method to the class to get email addresses (filter by valid email address)
-    def get_all_mit_members_of_list(self, name: str):
+
+    def get_members_of_list_by_type(self, name: str):
+        """
+        Gets each person in a given mailing list `name`.
+        Returns a tuple of 2 sets, first the kerbs of MIT members, and second the external email addresses
+        """
+    
         members = self.get_all_members_of_list(name, True)
         mit_members = set() # instead of list, to prevent duplicates
-        
+        external_members = set()
+
         # Copied from old/mailing_list_csv_to_json.py
         for user_type, user_string in ((member.type, member.member) for member in members):
             if user_type=="USER":
@@ -56,4 +60,8 @@ class MoiraAPI(Moira):
                     kerb, extension = user_string.split("@")
                     if extension=="ATHENA.MIT.EDU" or extension=="MIT.EDU":
                         mit_members.add(kerb)
-        return mit_members
+            elif user_type=="STRING":
+                if "@" in user_string and "<devnull" not in user_string and \
+                        " removed " not in user_string and " " not in user_string:
+                    external_members.add(user_string)
+        return mit_members, external_members

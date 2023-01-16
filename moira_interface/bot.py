@@ -78,7 +78,7 @@ async def create_list_room(list_name: str):
         name=list_name,  # For now
         topic=attributes['description'],
         invite=[f"@{member}:{config['server_name']}" for member in members],
-        invite_3pid=invite_3pid_from_email_list(invites),
+        invite_3pid=await invite_3pid_from_email_list(invites),
         preset=RoomPreset.trusted_private_chat, # this gives people perms (for now)
     )
     return response

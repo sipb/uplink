@@ -56,6 +56,15 @@ async def accept_identity_server_terms() -> requests.Response:
     return result
 
 
+async def invite_3pid_from_email_list(invites: list[str]):
+    id_access_token = await get_id_access_token()
+    return [dict(address=email,
+                id_access_token=id_access_token,
+                id_server=config['id_server'],
+                medium='email')
+            for email in invites]
+
+
 async def create_list_room(list_name: str):
     """
     Creates a room corresponding to the given Moira list `list_name`
@@ -69,15 +78,7 @@ async def create_list_room(list_name: str):
         name=list_name,  # For now
         topic=attributes['description'],
         invite=[f"@{member}:{config['server_name']}" for member in members],
-        invite_3pid=[
-            dict(
-                address=email,
-                id_access_token=await get_id_access_token(),
-                id_server=config['id_server'],
-                medium='email'
-            )
-            for email in invites
-        ],
+        invite_3pid=invite_3pid_from_email_list(invites),
         preset=RoomPreset.trusted_private_chat, # this gives people perms (for now)
     )
     return response

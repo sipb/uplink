@@ -72,6 +72,8 @@ async def create_list_room(list_name: str):
     attributes = moira.list_attributes(list_name)
     members, invites = moira.get_members_of_list_by_type(list_name)
     # TODO: restore /home/rgabriel/.local/lib/python3.10/site-packages/nio.bak into nio when the PR (TBD) is merged
+    # TODO: show a warning for hidden lists
+    # "The list is hidden. Matrix currently does not offer a way of hiding members so that will not be honored. Are you sure?"
     response = await client.room_create(
         visibility=RoomVisibility.private if attributes['hiddenList'] or not attributes['publicList'] else RoomVisibility.public,
         alias=list_name,
@@ -82,15 +84,17 @@ async def create_list_room(list_name: str):
         preset=RoomPreset.trusted_private_chat, # this gives people perms (for now)
     )
     return response
-    # TODO: also give room admin to the mailing list admins...
-    # i can't find the API to do that!! Aaaa
-    # https://github.com/matrix-org/matrix-react-sdk/blob/d835721ae1dd005b7c0ba5b4b2448f5396128e1a/src/components/views/settings/AddPrivilegedUsers.tsx
-    # I went to weblab for 15 minutes about react so i vaguely understand it but hm, no idea
-    # https://github.com/matrix-org/matrix-js-sdk/blob/185ded4ebc259d35f6c4c4945a68dba793703519/src/client.ts#L4089 
-    # ok this the JS client not react, now i know
-    # /rooms/$roomId/state/m.room.power_levels
+
+
+async def sync_moira_permissions(list_name: str):
+    """
+    Sync moira permissions to Matrix permissions
+    """
+    # https://github.com/matrix-org/matrix-js-sdk/blob/185ded4ebc259d35f6c4c4945a68dba793703519/src/client.ts#L4089
     # https://matrix.org/docs/api/#put-/_matrix/client/v3/rooms/-roomId-/state/-eventType-/-stateKey-
     # https://spec.matrix.org/v1.5/client-server-api/#mroompower_levels
+    # TODO: implement
+    pass
 
 
 # TODO: exception handling

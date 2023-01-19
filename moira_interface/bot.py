@@ -7,13 +7,31 @@ import json
 from nio import AsyncClient, MatrixRoom, RoomMessageText, RoomVisibility, RoomCreateError, RoomCreateResponse, Api, GetOpenIDTokenResponse, RoomPreset, RoomResolveAliasResponse, RoomResolveAliasError
 import requests  # TODO: remove once this is handled from nio
 import json  # likewise
+from database import Database
 
 moira = MoiraAPI()
-
 config = json.load(open('config.json', 'r'))
+db = Database()
 
 client = AsyncClient(config['homeserver'], config['username'])
 client.access_token = config['token']
+
+async def list_is_opted_in(list_name: str):
+    """
+    Has the Moira list `list_name` opted to have a room?
+    If yes, this means the room with alias `list_name` exists or should be created
+    """
+    if list_name.startswith('canvas-'):
+        return True
+    else:
+        return list_name in db['lists']
+
+
+async def list_opt_in(list_name: str):
+    """
+    Opt in the Moira list `list_name` to have a room, by saving this fact
+    """
+    db.append('lists', list_name)
 
 
 async def room_exists(alias: str):

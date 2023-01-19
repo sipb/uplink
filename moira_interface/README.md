@@ -2,7 +2,7 @@
 
 This is a Matrix bot that integrates with MIT mailing lists
 
-You need a config file with the following contents:
+You need a config file `config.json` with the following contents:
 
 ```json
 {
@@ -14,8 +14,14 @@ You need a config file with the following contents:
 }
 ```
 
+Also create `db.json` with the following contents:
+
+```json
+{
+    "lists": []
+}
+```
+
 NOTE: Before running the bot, you must look at the identity server terms at 
 https://matrix.org/_matrix/identity/v2/terms and accept them by running the
 `accept_identity_server_terms` function, possibly adjusting the URL if needed
-
-TODO: would be good to use `poetry` or something else for dependency management

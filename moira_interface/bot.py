@@ -35,6 +35,11 @@ async def list_opt_in(list_name: str):
 
 
 async def room_exists(alias: str):
+    """
+    Does the room with given alias `alias` exist in our homeserver?
+    """
+    if ':' not in alias:
+        alias = f"#{alias}:{config['server_name']}"
     response = await client.room_resolve_alias(alias)
     if isinstance(response, RoomResolveAliasResponse):
         return True

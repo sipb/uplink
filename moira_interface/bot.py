@@ -21,7 +21,7 @@ async def list_is_opted_in(list_name: str):
     Has the Moira list `list_name` opted to have a room?
     If yes, this means the room with alias `list_name` exists or should be created
     """
-    if list_name.startswith('canvas-'):
+    if list_name.startswith('canvas-') and list_name.endswith('-st'):
         return True
     else:
         return list_name in db['lists']
@@ -101,7 +101,7 @@ def generate_power_levels_for_list(l: MoiraList) -> dict:
     }
     
 
-async def create_list_room(list_name: str, sync_moira_permissions=True, caller=None) -> Union[RoomCreateResponse, RoomCreateError]:
+async def create_list_room(list_name: str, sync_moira_permissions=True, caller=None) -> RoomCreateResponse | RoomCreateError:
     """
     Creates a room corresponding to the given Moira list `list_name`, and opts it in 
 
@@ -160,30 +160,6 @@ async def message_callback(room: MatrixRoom, event: RoomMessageText) -> None:
     msg = event.body
     if msg.startswith('!ping'):
         await send_message('Pong!')
-    if msg.startswith('!myclasses'):
-        lists = moira.user_lists('rgabriel')
-        classes = [str(c) for c in Class.get_list_from_mailing_lists(
-            lists) if c.mailing_list.startswith('canvas-2023')]
-        await send_message('\n'.join(classes), 'm.notice')
-    if msg.startswith('!listinfo'):
-        if msg != '!listinfo':
-            list_name = msg.split(' ')[1]
-            attributes = moira.list_attributes(list_name)
-            await send_message(str(attributes), 'm.notice')
-    # TODO: follow list access control stuff
-    # and remove these commands which are just for debugging purposes
-    if msg.startswith('!idtoken'):
-        token = await get_id_access_token()
-        print(token)
-        await send_message(str(token))
-    if msg.startswith('!acceptterms'):
-        await send_message('on it!', 'm.notice')
-        response = await accept_identity_server_terms()
-        await send_message(f'{response} {response.content.decode()}', 'm.notice')
-    if msg.startswith('!listmembers'):
-        list_name = msg.split(' ')[1]
-        members, invites = moira.get_members_of_list_by_type(list_name)
-        await send_message('\n'.join(list(members) + list(invites)), 'm.notice')
     if msg.startswith('!createlistroom'):
         list_name = msg.split(' ')[1]
         await send_message(f'Creating room for list {list_name}', 'm.notice')

@@ -4,7 +4,7 @@ from canvas_class import Class
 from moira import MoiraAPI, MoiraList
 import asyncio
 import json
-from nio import AsyncClient, MatrixRoom, RoomMessageText, RoomVisibility, RoomCreateError, RoomCreateResponse, Api, GetOpenIDTokenResponse, RoomPreset, RoomResolveAliasResponse, RoomResolveAliasError
+from nio import AsyncClient, MatrixRoom, RoomMessageText, RoomVisibility, RoomCreateError, RoomCreateResponse, Api, GetOpenIDTokenResponse, RoomPreset, RoomResolveAliasResponse, RoomResolveAliasError, RoomPutStateResponse, RoomPutStateError
 import requests  # TODO: remove once this is handled from nio
 import json  # likewise
 from database import Database
@@ -130,6 +130,9 @@ async def create_list_room(list_name: str, sync_moira_permissions=True, caller=N
         'if the mailing list is hidden, ' + \
         'you MUST set invites_override to the room creator or any other initial member list, ' + \
         'to avoid leaking too much of the member list'
+    # We don't actually want to sync moira permissions from classes
+    if l.is_class:
+        sync_moira_permissions = False
     response = await client.room_create(
         visibility=RoomVisibility.private if l.is_hidden or not l.is_public else RoomVisibility.public,
         alias=l.get_matrix_room_alias(),
@@ -138,6 +141,7 @@ async def create_list_room(list_name: str, sync_moira_permissions=True, caller=N
         invite=[caller] if l.is_hidden else [username_from_localpart(member) for member in l.mit_members],
         invite_3pid=await invite_3pid_from_email_list(l.external_members),
         preset=RoomPreset.private_chat if sync_moira_permissions else RoomPreset.trusted_private_chat,
+        # TODO: i don't know if i'm doing this right
         power_level_override=generate_power_levels_for_list(l) if sync_moira_permissions else None,
     )
     if isinstance(response, RoomCreateResponse):
@@ -182,6 +186,41 @@ async def message_callback(room: MatrixRoom, event: RoomMessageText) -> None:
         list_name = msg.split(' ')[1]
         response = await client.room_delete_alias(f'#{list_name}:uplink.mit.edu')
         await send_message(str(response), 'm.notice')
+    if msg.startswith('!syncperms'):
+        # TODO: incorporate this code somewhere
+        # and make sure the caller has perms and
+        # don't do it for classes...
+        list_name = msg.split(' ')[1]
+        alias = f'#{list_name}:uplink.mit.edu'
+        response = await client.room_resolve_alias(alias)
+        if isinstance(response, RoomResolveAliasResponse):
+            id = response.room_id
+            perms = generate_power_levels_for_list(MoiraList(list_name))
+            response = await client.room_put_state(
+                room_id=id,
+                event_type=perms['type'],
+                content=perms['content'],
+            )
+            if isinstance(response, RoomPutStateResponse):
+                await send_message(f'done!')
+            else:
+                assert isinstance(response, RoomPutStateError)
+                await send_message(f'an error occured! {response.status_code} {response.message}')
+        else:
+            await send_message('room does not exist!', 'm.notice')
+    if msg.startswith('!getperms'):
+        list_name = msg.split(' ')[1]
+        alias = f'#{list_name}:uplink.mit.edu'
+        response = await client.room_resolve_alias(alias)
+        if isinstance(response, RoomResolveAliasResponse):
+            id = response.room_id
+            response = await client.room_get_state_event(
+                room_id=id,
+                event_type='m.room.power_levels'
+            )
+            await send_message(f'{response.content}')
+        else:
+            await send_message('room does not exist!', 'm.notice')
     if msg.startswith('!roomexists'):
         try:
             alias = msg.split(' ')[1]

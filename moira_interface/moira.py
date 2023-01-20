@@ -45,12 +45,14 @@ class MoiraAPI(Moira):
         # Credit: old/mailing_list_csv_to_json.py
         if "/" in user_string:
             kerb, extension = user_string.split("/")
+            # TODO: the root may be "extra" or something else
             if extension=="root@ATHENA.MIT.EDU":
                 return kerb
         else:
             kerb, extension = user_string.split("@")
             if extension=="ATHENA.MIT.EDU" or extension=="MIT.EDU":
                 return kerb
+        print(f'Warning: {user_string} returns None when normalized!')
 
 
     def get_members_of_list_by_type(self, name: str):
@@ -72,7 +74,9 @@ class MoiraAPI(Moira):
                 if "@" in user_string and "<devnull" not in user_string and \
                         " removed " not in user_string and " " not in user_string:
                     external_members.add(user_string)
-        return mit_members, external_members
+
+        # Remove the `None`s (TODO: fix normalize_kerberos to account for that)
+        return mit_members - {None}, external_members - {None}
 
 
 class MoiraList:

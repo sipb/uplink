@@ -107,6 +107,11 @@ class MoiraList:
 
     @property
     def description(self):
+        # It seems like some mailing lists annoyingly set their description
+        # to the string "none", probably because WebMoira forces you
+        # to add a description
+        if self.attributes['description'] == 'none':
+            return None
         return self.attributes['description']
     
     @property

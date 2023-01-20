@@ -166,7 +166,7 @@ async def message_callback(room: MatrixRoom, event: RoomMessageText) -> None:
     if msg.startswith('!createlistroom'):
         list_name = msg.split(' ')[1]
         await send_message(f'Creating room for list {list_name}', 'm.notice')
-        response = await create_list_room(list_name)
+        response = await create_list_room(list_name, caller=event.sender)
         print(response)
         if isinstance(response, RoomCreateResponse):
             await send_message('room has been created!', 'm.notice')

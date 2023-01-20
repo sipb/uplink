@@ -37,6 +37,22 @@ class MoiraAPI(Moira):
         return [ListMember.from_json(json) for json in dicts]
 
 
+    @staticmethod
+    def normalize_kerberos(user_string):
+        """
+        Turn a kerberos string into a normal kerb username without any suffixes
+        """
+        # Credit: old/mailing_list_csv_to_json.py
+        if "/" in user_string:
+            kerb, extension = user_string.split("/")
+            if extension=="root@ATHENA.MIT.EDU":
+                return kerb
+        else:
+            kerb, extension = user_string.split("@")
+            if extension=="ATHENA.MIT.EDU" or extension=="MIT.EDU":
+                return kerb
+
+
     def get_members_of_list_by_type(self, name: str):
         """
         Gets each person in a given mailing list `name`.
@@ -47,21 +63,85 @@ class MoiraAPI(Moira):
         mit_members = set() # instead of list, to prevent duplicates
         external_members = set()
 
-        # Copied from old/mailing_list_csv_to_json.py
         for user_type, user_string in ((member.type, member.member) for member in members):
             if user_type=="USER":
                 mit_members.add(user_string)
             elif user_type=="KERBEROS":
-                if "/" in user_string:
-                    kerb, extension = user_string.split("/")
-                    if extension=="root@ATHENA.MIT.EDU":
-                        mit_members.add(kerb)
-                else:
-                    kerb, extension = user_string.split("@")
-                    if extension=="ATHENA.MIT.EDU" or extension=="MIT.EDU":
-                        mit_members.add(kerb)
+                mit_members.add(self.normalize_kerberos(user_string))
             elif user_type=="STRING":
                 if "@" in user_string and "<devnull" not in user_string and \
                         " removed " not in user_string and " " not in user_string:
                     external_members.add(user_string)
         return mit_members, external_members
+
+
+class MoiraList:
+    """
+    A moira mailing list. Properties are loaded from demand and cached
+    to avoid making excessive calls to Moira APIs.
+
+    Because instances should be short-lived, there if something changes on the
+    Moira side, once it's cached, it will not change here.
+    """
+
+    def __init__(self, list_name: str):
+        self.list_name = list_name
+        self._moira = MoiraAPI()
+        self._attributes = None
+        self._members_by_type = None
+        self._owners = None
+        self._membership_administrators = None
+
+    def __repr__(self):
+        return f'MoiraList("{self.list_name}")'
+
+    @property
+    def attributes(self):
+        if self._attributes is None:
+            self._attributes = self._moira.list_attributes(self.list_name)
+        return self._attributes
+    
+    @property
+    def _members_by_type(self):
+        """
+        Get members of this list
+        Returns a tuple of 2 sets, first the kerbs of MIT members, and second the external email addresses
+        """
+        if self._members_by_type is None:
+            self._members_by_type = self._moira.get_members_of_list_by_type(self.list_name)
+        return self._members_by_type
+
+    @property
+    def mit_members(self):
+        return self._members_by_type[0]
+
+    @property
+    def external_members(self):
+        return self._members_by_type[1]
+
+    def _expand_members(self, moira_type: str, moira_name: str):
+        """
+        Get a list of users from the given type and name
+        """
+        if moira_type == 'NONE':
+            return []
+        elif moira_type == 'USER':
+            return [moira_name]
+        elif moira_type == 'KERBEROS':
+            return [self._moira.normalize_kerberos(moira_name)]
+        else:
+            assert moira_type == 'LIST'
+            return MoiraList(moira_name).mit_members
+    
+    @property
+    def owners(self):
+        if self._owners is None:
+            self._owners = self._expand_members(self.attributes['aceType'], self.attributes['aceName'])
+        return self._owners
+
+    @property
+    def membership_administrators(self):
+        if self._membership_administrators is None:
+            self._membership_administrators = self._expand_members(self.attributes['memaceType'], self.attributes['memaceName'])
+        return self._membership_administrators
+    

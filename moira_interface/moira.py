@@ -1,8 +1,5 @@
 from mit_moira import Moira
-
-# TODO: submit PRs to original package
-# Set limit to 0 for infinite results
-# Use kwargs instead of args on calls for readability
+from canvas_class import Class
 
 class ListMember:
     list: str
@@ -22,6 +19,9 @@ class ListMember:
     def __repr__(self):
         return f'ListMember("{self.list}", "{self.member}", "{self.type}")'
 
+# TODO: submit PRs to original package
+# Set limit to 0 for infinite results
+# Use kwargs instead of args on calls for readability
 class MoiraAPI(Moira):
     def __init__(self):
         super().__init__('personal.cert', 'personal.key')
@@ -100,9 +100,21 @@ class MoiraList:
         if self._attributes is None:
             self._attributes = self._moira.list_attributes(self.list_name)
         return self._attributes
+
+    @property
+    def description(self):
+        return self.attributes['description']
     
     @property
-    def _members_by_type(self):
+    def is_public(self):
+        return self.attributes['publicList']
+
+    @property
+    def is_hidden(self):
+        return self.attributes['hiddenList']
+
+    @property
+    def members_by_type(self):
         """
         Get members of this list
         Returns a tuple of 2 sets, first the kerbs of MIT members, and second the external email addresses
@@ -113,22 +125,22 @@ class MoiraList:
 
     @property
     def mit_members(self):
-        return self._members_by_type[0]
+        return self.members_by_type[0]
 
     @property
     def external_members(self):
-        return self._members_by_type[1]
+        return self.members_by_type[1]
 
     def _expand_members(self, moira_type: str, moira_name: str):
         """
         Get a list of users from the given type and name
         """
         if moira_type == 'NONE':
-            return []
+            return set()
         elif moira_type == 'USER':
-            return [moira_name]
+            return {moira_name}
         elif moira_type == 'KERBEROS':
-            return [self._moira.normalize_kerberos(moira_name)]
+            return {self._moira.normalize_kerberos(moira_name)}
         else:
             assert moira_type == 'LIST'
             return MoiraList(moira_name).mit_members
@@ -145,3 +157,40 @@ class MoiraList:
             self._membership_administrators = self._expand_members(self.attributes['memaceType'], self.attributes['memaceName'])
         return self._membership_administrators
     
+    @property
+    def is_class(self):
+        answer = self.list_name.startswith('canvas-')
+        if answer:
+            self.canvas_class = Class(self.list_name)
+        return answer
+
+    def get_matrix_room_name(self) -> str:
+        """
+        Generate a display name for the room corresponding to this list
+        (list name, in the case of classes, a nicer string is returned)
+        """
+        if self.is_class:
+            return self.canvas_class.get_room_name()
+        else:
+            return self.list_name
+    
+    def get_matrix_room_alias(self) -> str:
+        """
+        Generate an alias for the room corresponding to this list
+        (list name, in the case of canvas classes, it's stripped to be less lengthy)
+        """
+        if self.is_class:
+            return self.canvas_class.get_room_alias()
+        else:
+            return self.list_name
+
+    def get_matrix_room_description(self) -> str:
+        """
+        Generate a description for the room corresponding to this list
+        (class name or list description)
+        """
+        if self.is_class and self.canvas_class.full_name:
+            return self.canvas_class.full_name
+        else:
+            return self.description
+

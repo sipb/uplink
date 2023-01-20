@@ -1,7 +1,7 @@
 # for installation, see https://matrix-nio.readthedocs.io/en/latest/
 
 from canvas_class import Class
-from moira import MoiraAPI
+from moira import MoiraAPI, MoiraList
 import asyncio
 import json
 from nio import AsyncClient, MatrixRoom, RoomMessageText, RoomVisibility, RoomCreateError, RoomCreateResponse, Api, GetOpenIDTokenResponse, RoomPreset, RoomResolveAliasResponse, RoomResolveAliasError
@@ -27,13 +27,6 @@ async def list_is_opted_in(list_name: str):
         return list_name in db['lists']
 
 
-async def list_opt_in(list_name: str):
-    """
-    Opt in the Moira list `list_name` to have a room, by saving this fact
-    """
-    db.append('lists', list_name)
-
-
 async def room_exists(alias: str):
     """
     Does the room with given alias `alias` exist in our homeserver?
@@ -51,73 +44,105 @@ async def room_exists(alias: str):
             raise Exception(response)
 
 
-# TODO: this should be handled from nio
-# and fix this issue: https://github.com/poljar/matrix-nio/issues/375
-
-async def get_id_access_token() -> str:
-    url = f"https://{config['id_server']}/_matrix/identity/v2/account/register"
-    token = await client.get_openid_token(config['username'])
-    assert isinstance(token, GetOpenIDTokenResponse)
-    result = requests.post(url, json=dict(
-        access_token=token.access_token,
-        token_type="Bearer",
-        matrix_server_name=config['server_name'],
-        expires_in=token.expires_in,
-    ))
-    return json.loads(result.content)['access_token']
+def username_from_localpart(localpart: str):
+    return f"@{localpart}:{config['server_name']}"
 
 
-# You just have to call this function once, so I'm not calling it from any part of the code
-async def accept_identity_server_terms() -> requests.Response:
-    # Get terms from https://matrix.org/_matrix/identity/v2/terms
-    urls = ['https://matrix.org/legal/identity-server-privacy-notice-1']
-    result = requests.post(
-        url=f"https://{config['id_server']}/_matrix/identity/v2/terms",
-        json={'user_accepts': urls},
-        headers={'Authorization': f'Bearer {await get_id_access_token()}'},
-    )
-    return result
-
-
-async def invite_3pid_from_email_list(invites: list[str]):
-    id_access_token = await get_id_access_token()
-    return [dict(address=email,
-                id_access_token=id_access_token,
-                id_server=config['id_server'],
-                medium='email')
-            for email in invites]
-
-
-async def create_list_room(list_name: str):
+def generate_power_levels_for_list(l: MoiraList) -> dict:
     """
-    Creates a room corresponding to the given Moira list `list_name`
+    Generate a m.room.power_levels event based on the moira list permissions
+
+    This function is called on room creation when overriding the power levels or when syncing from the list
     """
-    attributes = moira.list_attributes(list_name)
-    members, invites = moira.get_members_of_list_by_type(list_name)
-    # TODO: restore /home/rgabriel/.local/lib/python3.10/site-packages/nio.bak into nio when the PR (TBD) is merged
-    # TODO: show a warning for hidden lists
-    # "The list is hidden. Matrix currently does not offer a way of hiding members so that will not be honored. Are you sure?"
+    # How to send a state event: https://matrix.org/docs/api/#put-/_matrix/client/v3/rooms/-roomId-/state/-eventType-/-stateKey-
+
+    # Help, I think I am overthinking things considering I am considering lists with memacl
+    # because not even webmoira lets you set that
+    # It would be nice to make a nicer WebMoira client tho...
+    
+    return {
+        # This is a power_levels event, as defined in the spec:
+        # https://spec.matrix.org/v1.5/client-server-api/#mroompower_levels
+        "type": "m.room.power_levels",
+
+        "content": {
+            # The default power level for a user to have is 0
+            "users_default": 0,
+
+            # For moira lists, 50 should mean memacl, and 100 owner
+            "users": {username_from_localpart(u): 100 for u in l.owners}
+                   | {username_from_localpart(u): 50 for u in l.membership_administrators}
+                   | {config['username']: 100}, # bot itself should have permissions (TODO unless it's not required for appservice)
+
+            # These are the power levels required to send specific types of events            
+            "events": {
+                "m.room.name": 50,
+                "m.room.power_levels": 100,
+                "m.room.history_visibility": 100,
+                "m.room.canonical_alias": 100,
+                "m.room.avatar": 50, # *room* avatar
+                "m.room.tombstone": 100,
+                "m.room.server_acl": 100,
+                "m.room.encryption": 50,
+                "m.room.pinned_events": 0, # anyone can pin!
+                "m.room.join_rules": 50,
+            },
+            "ban": 100,
+            "kick": 50,
+            "redact": 100,
+            "invite": 0 if l.is_public else 50,
+
+            # The default power level required to send a message event other than specified above is 0
+            "events_default": 0,
+
+            # The default power level required to send a state event other than specified above is 0
+            "state_default": 50,
+        },
+    }
+    
+
+async def create_list_room(list_name: str, sync_moira_permissions=True, caller=None) -> Union[RoomCreateResponse, RoomCreateError]:
+    """
+    Creates a room corresponding to the given Moira list `list_name`, and opts it in 
+
+    If `sync_moira_permissions` is true, the permissions on the Matrix room will reflect
+    the permissions of the mailing list, otherwise, it will be closer to a traditional group
+    chat (i.e. RoomPreset.trusted_private_chat)
+
+    `caller` is the name of the person who invoked the creation of the room (full username)
+    This is required with hidden lists because members are added lazily instead of all at once
+    to try to comply with the property.
+
+    Returns the result of client.room_create (RoomCreateResponse on success)
+    """
+    async def invite_3pid_from_email_list(invites: list[str]):
+        if not invites:
+            return None
+        id_access_token = await get_id_access_token()
+        return [dict(address=email,
+                    id_access_token=id_access_token,
+                    id_server=config['id_server'],
+                    medium='email')
+                for email in invites]
+
+    l = MoiraList(list_name)
+    assert not (l.is_hidden and caller is None), \
+        'if the mailing list is hidden, ' + \
+        'you MUST set invites_override to the room creator or any other initial member list, ' + \
+        'to avoid leaking too much of the member list'
     response = await client.room_create(
-        visibility=RoomVisibility.private if attributes['hiddenList'] or not attributes['publicList'] else RoomVisibility.public,
-        alias=list_name,
-        name=list_name,  # For now
-        topic=attributes['description'],
-        invite=[f"@{member}:{config['server_name']}" for member in members],
-        invite_3pid=await invite_3pid_from_email_list(invites),
-        preset=RoomPreset.trusted_private_chat, # this gives people perms (for now)
+        visibility=RoomVisibility.private if l.is_hidden or not l.is_public else RoomVisibility.public,
+        alias=l.get_matrix_room_alias(),
+        name=l.get_matrix_room_name(),
+        topic=l.get_matrix_room_description(),
+        invite=[caller] if l.is_hidden else [username_from_localpart(member) for member in l.mit_members],
+        invite_3pid=await invite_3pid_from_email_list(l.external_members),
+        preset=RoomPreset.private_chat if sync_moira_permissions else RoomPreset.trusted_private_chat,
+        power_level_override=generate_power_levels_for_list(l) if sync_moira_permissions else None,
     )
+    if isinstance(response, RoomCreateResponse):
+        db.append('lists', list_name)
     return response
-
-
-async def sync_moira_permissions(list_name: str):
-    """
-    Sync moira permissions to Matrix permissions
-    """
-    # https://github.com/matrix-org/matrix-js-sdk/blob/185ded4ebc259d35f6c4c4945a68dba793703519/src/client.ts#L4089
-    # https://matrix.org/docs/api/#put-/_matrix/client/v3/rooms/-roomId-/state/-eventType-/-stateKey-
-    # https://spec.matrix.org/v1.5/client-server-api/#mroompower_levels
-    # TODO: implement
-    pass
 
 
 # TODO: exception handling
@@ -141,9 +166,10 @@ async def message_callback(room: MatrixRoom, event: RoomMessageText) -> None:
             lists) if c.mailing_list.startswith('canvas-2023')]
         await send_message('\n'.join(classes), 'm.notice')
     if msg.startswith('!listinfo'):
-        list_name = msg.split(' ')[1]
-        attributes = moira.list_attributes(list_name)
-        await send_message(str(attributes), 'm.notice')
+        if msg != '!listinfo':
+            list_name = msg.split(' ')[1]
+            attributes = moira.list_attributes(list_name)
+            await send_message(str(attributes), 'm.notice')
     # TODO: follow list access control stuff
     # and remove these commands which are just for debugging purposes
     if msg.startswith('!idtoken'):
@@ -186,6 +212,35 @@ async def message_callback(room: MatrixRoom, event: RoomMessageText) -> None:
             await send_message('Yes' if await room_exists(alias) else 'No')
         except Exception as e:
             await send_message(f'{e}', 'm.notice')
+
+
+# TODO: this should be handled from nio
+# and fix this issue: https://github.com/poljar/matrix-nio/issues/375
+# currently manually editing the site-package to add missing parameter
+
+async def get_id_access_token() -> str:
+    url = f"https://{config['id_server']}/_matrix/identity/v2/account/register"
+    token = await client.get_openid_token(config['username'])
+    assert isinstance(token, GetOpenIDTokenResponse)
+    result = requests.post(url, json=dict(
+        access_token=token.access_token,
+        token_type="Bearer",
+        matrix_server_name=config['server_name'],
+        expires_in=token.expires_in,
+    ))
+    return json.loads(result.content)['access_token']
+
+
+# You just have to call this function once, so I'm not calling it from any part of the code
+async def accept_identity_server_terms() -> requests.Response:
+    # Get terms from https://matrix.org/_matrix/identity/v2/terms
+    urls = ['https://matrix.org/legal/identity-server-privacy-notice-1']
+    result = requests.post(
+        url=f"https://{config['id_server']}/_matrix/identity/v2/terms",
+        json={'user_accepts': urls},
+        headers={'Authorization': f'Bearer {await get_id_access_token()}'},
+    )
+    return result
 
 
 async def main() -> None:

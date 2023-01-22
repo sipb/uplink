@@ -4,7 +4,7 @@ from canvas_class import Class
 from moira import MoiraAPI, MoiraList
 import asyncio
 import json
-from nio import AsyncClient, MatrixRoom, RoomMessageText, RoomVisibility, RoomCreateError, RoomCreateResponse, Api, GetOpenIDTokenResponse, RoomPreset, RoomResolveAliasResponse, RoomResolveAliasError, RoomPutStateResponse, RoomPutStateError
+from nio import AsyncClient, MatrixRoom, RoomMessageText, RoomVisibility, RoomCreateError, RoomCreateResponse, Api, GetOpenIDTokenResponse, RoomPreset, RoomResolveAliasResponse, RoomResolveAliasError, RoomPutStateResponse, RoomPutStateError, ErrorResponse
 import requests  # TODO: remove once this is handled from nio
 import json  # likewise
 from database import Database
@@ -16,38 +16,68 @@ db = Database()
 client = AsyncClient(config['homeserver'], config['username'])
 client.access_token = config['token']
 
-async def list_is_opted_in(list_name: str):
+
+class MatrixException(Exception):
     """
-    Has the Moira list `list_name` opted to have a room?
-    If yes, this means the room with alias `list_name` exists or should be created
+    Wrapper for a matrix-nio error that works with exception handling
+    `error` should be the nio error
     """
-    if list_name.startswith('canvas-') and list_name.endswith('-st'):
-        return True
+    def __init__(self, error: ErrorResponse):
+        self.error = error
+        self.status_code = error.status_code
+        self.message = error.message
+
+    def __str__(self):
+        return f'[{self.status_code}] {self.message}'
+
+# TODO: hmmmm maybe this won't be necessasry
+# checking of the existence of the room should work (except for canvas, then create it if it doesn't exist)
+# async def list_is_opted_in(list_name: str):
+#     """
+#     Has the Moira list `list_name` opted to have a room?
+#     If yes, this means the room with alias `list_name` exists or should be created
+#     """
+#     if list_name.startswith('canvas-') and list_name.endswith('-st'):
+#         return True
+#     else:
+#         return list_name in db['lists']
+
+
+async def room_id(alias: str):
+    """
+    Get the room ID of this alias, used for some API calls
+    """
+    if ':' not in alias:
+        alias = room_alias_from_localpart(alias)
+    response = await client.room_resolve_alias(alias)
+    if isinstance(response, RoomResolveAliasResponse):
+        return response.room_id
     else:
-        return list_name in db['lists']
+        assert isinstance(response, RoomResolveAliasError)
+        if response.status_code == 'M_NOT_FOUND':
+            return None
+        else:
+            raise MatrixException(response)
 
 
 async def room_exists(alias: str):
     """
     Does the room with given alias `alias` exist in our homeserver?
     """
-    if ':' not in alias:
-        alias = f"#{alias}:{config['server_name']}"
-    response = await client.room_resolve_alias(alias)
-    if isinstance(response, RoomResolveAliasResponse):
-        return True
-    else:
-        assert isinstance(response, RoomResolveAliasError)
-        if response.status_code == 'M_NOT_FOUND':
-            return False
-        else:
-            raise Exception(response)
+    id = await room_id(alias)
+    return id is not None
 
 
 def username_from_localpart(localpart: str):
     return f"@{localpart}:{config['server_name']}"
 
 
+def room_alias_from_localpart(localpart: str):
+    return f"#{localpart}:{config['server_name']}"
+
+
+# TODO: even if they are for testing, this has no backwards compatibility with existing rooms
+# because [M_FORBIDDEN] You don't have permission to add ops level greater than your own
 def generate_power_levels_for_list(l: MoiraList) -> dict:
     """
     Generate a m.room.power_levels event based on the moira list permissions
@@ -102,7 +132,7 @@ def generate_power_levels_for_list(l: MoiraList) -> dict:
             "state_default": 50,
         },
     }
-    
+   
 
 async def create_list_room(list_name: str, sync_moira_permissions=True, caller=None) -> RoomCreateResponse | RoomCreateError:
     """
@@ -131,7 +161,7 @@ async def create_list_room(list_name: str, sync_moira_permissions=True, caller=N
     l = MoiraList(list_name)
     assert not (l.is_hidden and caller is None), \
         'if the mailing list is hidden, ' + \
-        'you MUST set invites_override to the room creator or any other initial member list, ' + \
+        'you MUST set caller to the room creator, ' + \
         'to avoid leaking too much of the member list'
     # We don't actually want to sync moira permissions from classes
     if l.is_class:
@@ -142,6 +172,7 @@ async def create_list_room(list_name: str, sync_moira_permissions=True, caller=N
         name=l.get_matrix_room_name(),
         topic=l.get_matrix_room_description(),
         invite=[caller] if l.is_hidden else [username_from_localpart(member) for member in l.mit_members],
+        # Hiding the 3pids is not an issue for hidden lists because email addresses are censored
         invite_3pid=await invite_3pid_from_email_list(l.external_members),
         preset=RoomPreset.private_chat if sync_moira_permissions else RoomPreset.trusted_private_chat,
         power_level_override=generate_power_levels_for_list(l)['content'] if sync_moira_permissions else None,
@@ -150,6 +181,46 @@ async def create_list_room(list_name: str, sync_moira_permissions=True, caller=N
         db.append('lists', list_name)
     return response
 
+
+async def sync_power_levels(l: MoiraList):
+    """
+    Sync the Moira list permissions to Matrix room power levels for the specified moira list
+    """
+    alias = room_alias_from_localpart(l.get_matrix_room_alias())
+    id = await room_id(alias)
+
+    if id is not None:
+        perms = generate_power_levels_for_list(l)
+        response = await client.room_put_state(
+            room_id=id,
+            event_type=perms['type'],
+            content=perms['content'],
+        )
+        if isinstance(response, RoomPutStateError):
+            raise MatrixException(response)
+        else:
+            assert isinstance(response, RoomPutStateResponse)
+    else:
+        raise Exception(f'room {alias} does not exist!')
+
+
+async def sync_membership(l: MoiraList):
+    """
+    Sync the Moira list membership to Matrix room members (add if necessary)
+    """
+    # TODO: implement
+    return NotImplementedError()
+
+
+async def sync_moira_list(l: MoiraList, sync_moira_permissions=True):
+    if room_exists(l.get_matrix_room_alias()):
+        await sync_power_levels(l)
+        await sync_membership(l)
+    else:
+        # It's fine to pass the list name and no additional API calls are made
+        # because getting the room alias does not use up any queries
+        await create_list_room(l.list_name, sync_moira_permissions)
+    
 
 # TODO: exception handling
 # for instance, currently crashes if you try to create a list room for a list that doesn't exist
@@ -193,23 +264,10 @@ async def message_callback(room: MatrixRoom, event: RoomMessageText) -> None:
         # and make sure the caller has perms and
         # don't do it for classes...
         list_name = msg.split(' ')[1]
-        alias = f'#{list_name}:uplink.mit.edu'
-        response = await client.room_resolve_alias(alias)
-        if isinstance(response, RoomResolveAliasResponse):
-            id = response.room_id
-            perms = generate_power_levels_for_list(MoiraList(list_name))
-            response = await client.room_put_state(
-                room_id=id,
-                event_type=perms['type'],
-                content=perms['content'],
-            )
-            if isinstance(response, RoomPutStateResponse):
-                await send_message(f'done!')
-            else:
-                assert isinstance(response, RoomPutStateError)
-                await send_message(f'an error occured! {response.status_code} {response.message}')
-        else:
-            await send_message('room does not exist!', 'm.notice')
+        try:
+            await sync_power_levels(MoiraList(list_name))
+        except Exception as e:
+            await send_message(f'{e}', 'm.notice')
     if msg.startswith('!getperms'):
         list_name = msg.split(' ')[1]
         alias = f'#{list_name}:uplink.mit.edu'

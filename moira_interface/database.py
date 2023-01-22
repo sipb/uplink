@@ -4,6 +4,10 @@ import json
 # everything is O(N), and idk performat that would be in practice
 # or ask what's the best way somewhere
 
+# well, if you really need a database, here is a novel idea: use Matrix itself as the database
+# after all it is a big DAG of events and you can query for specific state events
+# so in the end, maaaaaaaybe this might do the trick instead, using one room as database
+
 class Database:
     """
     Basically a persistent dict that (for now) writes and reads from a JSON file

@@ -72,14 +72,14 @@ def generate_power_levels_for_list(l: MoiraList) -> dict:
             # For moira lists, 50 should mean memacl, and 100 owner
             "users": {username_from_localpart(u): 100 for u in l.owners}
                    | {username_from_localpart(u): 50 for u in l.membership_administrators}
-                   | {config['username']: 100}, # bot itself should have permissions (TODO unless it's not required for appservice)
+                   | {config['username']: 101},
 
             # These are the power levels required to send specific types of events            
             "events": {
                 "m.room.name": 50,
                 "m.room.power_levels": 100,
                 "m.room.history_visibility": 100,
-                "m.room.canonical_alias": 100,
+                "m.room.canonical_alias": 101,
                 "m.room.avatar": 50, # *room* avatar
                 "m.room.tombstone": 100,
                 "m.room.server_acl": 100,
@@ -90,6 +90,9 @@ def generate_power_levels_for_list(l: MoiraList) -> dict:
             "ban": 100,
             "kick": 50,
             "redact": 100,
+
+            # TODO: wait, I think public lists don't give you permissions to add others
+            # do we want to replicate that behavior? lol
             "invite": 0 if l.is_public else 50,
 
             # The default power level required to send a message event other than specified above is 0

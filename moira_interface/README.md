@@ -10,7 +10,12 @@ You need a config file `config.json` with the following contents:
     "server_name": "uplink.mit.edu",
     "username": "@moira-bot:uplink.mit.edu",
     "token": "your-precious-token-goes-here",
-    "id_server": "matrix.org"
+    "id_server": "matrix.org",
+    "power_levels": {
+        "bot": 101,
+        "owner": 100,
+        "memacl": 50
+    }
 }
 ```
 

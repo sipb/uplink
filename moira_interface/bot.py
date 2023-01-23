@@ -86,50 +86,49 @@ def generate_power_levels_for_list(l: MoiraList) -> dict:
     """
     # How to send a state event: https://matrix.org/docs/api/#put-/_matrix/client/v3/rooms/-roomId-/state/-eventType-/-stateKey-
 
-    # Help, I think I am overthinking things considering I am considering lists with memacl
-    # because not even webmoira lets you set that
-    # It would be nice to make a nicer WebMoira client tho...
-    
+    role_bot = config['power_levels']['bot']
+    role_owner = config['power_levels']['owner']
+    role_memacl = config['power_levels']['memacl']
+    role_user = 0
+
     return {
         # This is a power_levels event, as defined in the spec:
         # https://spec.matrix.org/v1.5/client-server-api/#mroompower_levels
         "type": "m.room.power_levels",
 
         "content": {
-            # The default power level for a user to have is 0
-            "users_default": 0,
+            "users_default": role_user,
 
-            # For moira lists, 50 should mean memacl, and 100 owner
-            "users": {username_from_localpart(u): 100 for u in l.owners}
-                   | {username_from_localpart(u): 50 for u in l.membership_administrators}
-                   | {config['username']: 101},
+            "users": {username_from_localpart(u): role_owner for u in l.owners}
+                   | {username_from_localpart(u): role_memacl for u in l.membership_administrators}
+                   | {config['username']: role_bot},
 
             # These are the power levels required to send specific types of events            
             "events": {
-                "m.room.name": 50,
-                "m.room.power_levels": 100,
-                "m.room.history_visibility": 100,
-                "m.room.canonical_alias": 101,
-                "m.room.avatar": 50, # *room* avatar
-                "m.room.tombstone": 100,
-                "m.room.server_acl": 100,
-                "m.room.encryption": 50,
-                "m.room.pinned_events": 0, # anyone can pin!
-                "m.room.join_rules": 50,
+                "m.room.name": role_memacl,
+                "m.room.power_levels": role_owner,
+                "m.room.history_visibility": role_owner,
+                "m.room.canonical_alias": role_bot,
+                "m.room.avatar": role_memacl, # *room* avatar
+                "m.room.tombstone": role_owner,
+                "m.room.server_acl": role_owner,
+                "m.room.encryption": role_memacl,
+                "m.room.pinned_events": role_user, # anyone can pin!
+                "m.room.join_rules": role_memacl,
             },
-            "ban": 100,
-            "kick": 50,
-            "redact": 100,
+            "ban": role_owner,
+            "kick": role_memacl,
+            "redact": role_owner,
 
             # TODO: wait, I think public lists don't give you permissions to add others
             # do we want to replicate that behavior? lol
-            "invite": 0 if l.is_public else 50,
+            "invite": role_user if l.is_public else role_memacl,
 
             # The default power level required to send a message event other than specified above is 0
-            "events_default": 0,
+            "events_default": role_user,
 
             # The default power level required to send a state event other than specified above is 0
-            "state_default": 50,
+            "state_default": role_memacl,
         },
     }
    

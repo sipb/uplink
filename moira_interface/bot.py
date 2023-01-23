@@ -173,7 +173,7 @@ async def create_list_room(list_name: str, sync_moira_permissions=True, caller=N
         invite=[caller] if l.is_hidden else [username_from_localpart(member) for member in l.mit_members],
         # Hiding the 3pids is not an issue for hidden lists because email addresses are censored
         invite_3pid=await invite_3pid_from_email_list(l.external_members),
-        preset=RoomPreset.private_chat if sync_moira_permissions else RoomPreset.trusted_private_chat,
+        preset=(RoomPreset.public_chat if l.is_public else RoomPreset.private_chat) if sync_moira_permissions else RoomPreset.trusted_private_chat,
         power_level_override=generate_power_levels_for_list(l)['content'] if sync_moira_permissions else None,
     )
     if isinstance(response, RoomCreateResponse):

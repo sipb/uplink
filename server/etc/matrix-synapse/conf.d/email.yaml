@@ -5,7 +5,7 @@
 # I can't get it to work...
 email:
   smtp_host: outgoing.mit.edu
-  smtp_port: 587 #587,465,25
+  smtp_port: 25 #587,465,25
   # TODO: do the full address
   # i.e. "Matrix notifications <matrix@mit.edu>"
   # or something...

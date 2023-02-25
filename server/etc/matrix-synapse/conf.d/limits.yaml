@@ -1,5 +1,6 @@
-# TODO: remove these limits after upgrading to physical server
-
-limit_remote_rooms:
-  enabled: true
-  complexity_error: "Our test server is still too weak for that, sorry. Coming soon"
+# TODO: make bot into an appservice so rate limits still apply for everyone
+# allow adding infinitely many people to a room when creating
+rc_invites:
+  per_room:
+    per_second: 20
+    burst_count: 10000

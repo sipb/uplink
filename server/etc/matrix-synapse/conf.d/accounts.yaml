@@ -66,6 +66,7 @@ sso:
 # Useful source apart form official docs: https://nickx.hu/posts/2020-07-13-matrix-synapse-shibboleth-saml.html
 saml2_config:
   sp_config:
+    name: SIPB Matrix
     metadata:
       remote:
         - url: 'https://touchstone.mit.edu/metadata/MIT-metadata.xml'
@@ -75,15 +76,15 @@ saml2_config:
     encryption_keypairs:
       - key_file: /etc/shibboleth/sp-encrypt-key.pem
         cert_file: /etc/shibboleth/sp-encrypt-cert.pem
-    entityid: 'https://uplink.mit.edu/shibboleth'
+    # entityid: 'https://uplink.mit.edu/shibboleth'
     verify_ssl_cert: true
     accepted_time_diff: 3
     service:
       sp:
         allow_unsolicited: true
-        endpoints:
-          assertion_consumer_service:
-            - 'https://uplink.mit.edu/Shibboleth.sso/SAML2/POST'
+        # endpoints:
+        #  assertion_consumer_service:
+        #    - 'https://uplink.mit.edu/Shibboleth.sso/SAML2/POST'
         required_attributes:
           - affiliation
           - eppn

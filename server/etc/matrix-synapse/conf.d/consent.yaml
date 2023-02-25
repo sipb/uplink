@@ -1,0 +1,5 @@
+user_consent:
+  template_dir: /etc/matrix-synapse/consent_templates
+  require_at_registration: true
+  policy_name: "Terms and Privacy"
+  version: 1.0

@@ -10,3 +10,9 @@ server_notices:
   system_mxid_avatar_url: "mxc://uplink.mit.edu/VtGXXFNoYsaPEoUKTGYSfafD"
   room_name: "Notices"
 
+templates:
+  custom_template_directory: /etc/matrix-synapse/templates
+
+modules:
+  - module: uplink.UplinkSynapseService
+    config: {}

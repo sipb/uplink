@@ -38,6 +38,7 @@ password_config:
 
 sso:
   client_whitelist:
+    - https://matrix.mit.edu/
     - https://uplink.mit.edu/
     - https://app.cinny.in/
     - https://app.element.io/

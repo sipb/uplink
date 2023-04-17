@@ -27,7 +27,8 @@
         "feature_pinning": true,
         "feature_custom_themes": true,
         "feature_thread": true,
-        "feature_video_rooms": true
+        "feature_video_rooms": true,
+        "feature_exploring_public_spaces": true
     },
     "default_federate": true,
     "default_theme": "dark",

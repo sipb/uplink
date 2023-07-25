@@ -12,6 +12,8 @@ SIPB Matrix (codename Uplink) is SIPB's effort to bring the [Matrix](https://mat
 
 ## What other repos are part of this project?
 
+* [matrix-synapse-saml-touchstone](https://github.com/gabrc52/matrix-synapse-saml-touchstone): Let people confirm their display name when logging in with Touchstone for the first time.
+
 * [matrix-zephyr-bridge](https://github.com/sipb/matrix-zephyr-bridge): A bridge with Zephyr, an old messaging protocol still used by SIPB alumni
 
 * [mattermost-to-matrix-migration](https://github.com/gabrc52/mattermost-to-matrix-migration): A backfill bridge with Mattermost, in an attempt to move SIPB to Matrix while preserving full compatibility with Mattermost.

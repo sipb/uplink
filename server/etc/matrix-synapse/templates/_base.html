@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% endblock %}</title>
+    <style type="text/css">
+      {%- include 'style.css' without context %}
+    </style>
+    {% block header %}{%  endblock %}
+</head>
+<body>
+<header class="mx_Header">
+    <img src="https://stuff.mit.edu/sipb/images/fuzzball.png" height="51" alt="sipb"/>
+    <img src="https://matrix.org/img/matrix-120x51.png" width="120" height="51" alt="[matrix]"/>
+</header>
+
+{% block body %}{% endblock %}
+
+</body>
+</html>

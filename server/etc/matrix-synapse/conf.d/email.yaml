@@ -10,8 +10,8 @@ email:
   # i.e. "Matrix notifications <matrix@mit.edu>"
   # or something...
   notif_from: "matrix@mit.edu"
-  require_transport_security: true
-  enable_tls: true
+  #require_transport_security: true
+  enable_tls: false # :(
   #force_tls: true
   app_name: Uplink
   # TODO: change client_base_url

@@ -1,7 +1,7 @@
 # Privacy-related settings
 # TODO: think about them and change them
 
-require_auth_for_profile_requests: true # default false
+require_auth_for_profile_requests: false # default false
 allow_profile_lookup_over_federation: true # default true
 limit_profile_requests_to_users_who_share_rooms: false # default false
 allow_public_rooms_over_federation: false # default false

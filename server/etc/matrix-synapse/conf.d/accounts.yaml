@@ -34,7 +34,9 @@ allowed_local_3pids:
     pattern: '.+'
 
 password_config:
-  enabled: false # Disable password authentication
+  # Enable for Matterbridge
+  # TODO: switch to a better bot
+  enabled: true # Disable password authentication
 
 sso:
   client_whitelist:
@@ -44,6 +46,7 @@ sso:
     - https://app.element.io/
     - https://fluffychat.im/
   # I'm not adding the mobile ones because a malicious app could register the URL schemes
+  # Hmm: you can still consider it. If someone has a malicious app installed, they have deeper problems
 
 # OpenID connect pilot
 #oidc_providers:
@@ -71,21 +74,17 @@ saml2_config:
     metadata:
       remote:
         - url: 'https://touchstone.mit.edu/metadata/MIT-metadata.xml'
-          cert: /etc/shibboleth/mit-md-cert.pem
-    key_file: /etc/shibboleth/sp-signing-key.pem
-    cert_file: /etc/shibboleth/sp-signing-cert.pem
+          cert: /etc/matrix-synapse/saml/mit-md-cert.pem
+    key_file: /etc/matrix-synapse/saml/sp-signing-key.pem
+    cert_file: /etc/matrix-synapse/saml/sp-signing-cert.pem
     encryption_keypairs:
-      - key_file: /etc/shibboleth/sp-encrypt-key.pem
-        cert_file: /etc/shibboleth/sp-encrypt-cert.pem
-    # entityid: 'https://uplink.mit.edu/shibboleth'
+      - key_file: /etc/matrix-synapse/saml/sp-encrypt-key.pem
+        cert_file: /etc/matrix-synapse/saml/sp-encrypt-cert.pem
     verify_ssl_cert: true
     accepted_time_diff: 3
     service:
       sp:
         allow_unsolicited: true
-        # endpoints:
-        #  assertion_consumer_service:
-        #    - 'https://uplink.mit.edu/Shibboleth.sso/SAML2/POST'
         required_attributes:
           - affiliation
           - eppn
@@ -94,7 +93,7 @@ saml2_config:
         optional_attributes:
           - memberOf
         allow_unknown_attributes: true 
-    attribute_map_dir: /etc/matrix-synapse/saml2-attribute-maps
+    attribute_map_dir: /etc/matrix-synapse/saml/attribute-maps
   user_mapping_provider:
     module: matrix_saml_strip_hostname.mapping_providers.StripHostnameSamlMappingProvider
     config:

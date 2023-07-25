@@ -1,3 +1,7 @@
+# Tells Synapse what domain it's running under
+# (otherwise it will redirect to the wrong place)
+public_baseurl: "https://matrix-synapse.mit.edu"
+
 # When sharing, redirects to uplink.mit.edu instead of matrix.to
 # This is only for email notifications, the rest has to be configured within Element
 client_base_url: "https://matrix.mit.edu"
@@ -5,14 +9,15 @@ client_base_url: "https://matrix.mit.edu"
 admin_contact: 'mailto:sipb-uplink-team@mit.edu'
 
 server_notices:
-  system_mxid_localpart: fuzzball
-  system_mxid_display_name: "Fuzzball"
-  #system_mxid_avatar_url: "mxc://matrix.mit.edu/TODO"
+  system_mxid_localpart: announcements
+  system_mxid_display_name: "SIPB Matrix"
+  system_mxid_avatar_url: "mxc://matrix.mit.edu/hotLJkDuzNWkyxNTgxFMeYBH"
   room_name: "Server Notices"
 
 templates:
   custom_template_directory: /etc/matrix-synapse/templates
 
-modules:
-  - module: uplink.UplinkSynapseService
-    config: {}
+# Not using yet, and not sure how to import it yet
+# modules:
+  # - module: uplink.UplinkSynapseService
+    # config: {}

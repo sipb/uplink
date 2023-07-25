@@ -1,6 +1,23 @@
 # TODO: make bot into an appservice so rate limits still apply for everyone
 # allow adding infinitely many people to a room when creating
+#
+# There is also an admin API endpoint to disable ratelimiting for certain users
 rc_invites:
   per_room:
     per_second: 20
     burst_count: 10000
+
+# When using bridges, users may receive several invites.
+# Don't have unreasonable ratelimits for joining them/accepting them
+rc_joins:
+  local:
+    per_second: 20
+    burst_count: 10000
+  remote:
+    per_second: 20
+    burst_count: 200
+
+# TODO: also un-ratelimit leaves
+
+# Allow bigger files
+max_upload_size: 1024M

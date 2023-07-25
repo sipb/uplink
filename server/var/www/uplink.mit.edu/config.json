@@ -28,7 +28,7 @@
         "feature_custom_themes": true,
         "feature_thread": true,
         "feature_video_rooms": true,
-        "feature_exploring_public_spaces": true
+	"feature_exploring_public_spaces": true
     },
     "default_federate": true,
     "default_theme": "dark",
@@ -43,7 +43,13 @@
         "breadcrumbs": true,
         "UIFeature.registration": false,
         "UIFeature.passwordReset": true,
-        "showDisplaynameChanges": false
+        "showDisplaynameChanges": false,
+	"comment": "the next thing is a test idk if it works",
+        "roomColor": {
+                "primary_color": "#81bddb",
+                "secondary_color": "#eaf1f4"
+        }
+
     },
     "jitsi": {
         "preferred_domain": "meet.element.io"
@@ -61,7 +67,7 @@
         ]
     },
     "sso_redirect_options": {
-        "immediate": true
+        "immediate": false
     },
     "permalink_prefix": "https://uplink.mit.edu"
 }

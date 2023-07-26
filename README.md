@@ -8,7 +8,7 @@ SIPB Matrix (codename Uplink) is SIPB's effort to bring the [Matrix](https://mat
 
 * `moira_interface` (deprecated): first attempt to build a Moira integration. It uses a deprecated Moira API.
 
-* `uplink_synapse_module`: custom code to interface with Synapse (also WIP, may move to another repo)
+* `uplink_synapse_module`: custom code to interface with Synapse. `first_login.py` to welcome the user upon registering, and `people_api.py` to enable searching users from the MIT People API.
 
 ## What other repos are part of this project?
 

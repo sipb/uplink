@@ -1,0 +1,6 @@
+experimental_features:
+  # Batch sending for app services (lazy history fill)
+  msc2716_enabled: true
+
+  # Enable previews in matrix.to
+  msc3266_enabled: true

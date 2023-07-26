@@ -56,11 +56,14 @@
     "map_style_url": "https://api.maptiler.com/maps/streets/style.json?key=fU3vlMsMn4Jb6dnEIFsx",
     "branding": {
         "welcome_background_url": [
-            "https://cdn.discordapp.com/attachments/801165951038259230/1057888641873100820/Lots_of_cursed_beaver.png"
+            "/mit.jpg"
         ]
     },
     "sso_redirect_options": {
-        "immediate": true
+        "immediate": false
     },
-    "permalink_prefix": "https://matrix.mit.edu"
+    "permalink_prefix": "https://matrix.mit.edu/",
+    "embedded_pages": {
+    	"welcome_url": "/welcome-customized.html"
+    }
 }

@@ -1,0 +1,96 @@
+server {
+
+	root /var/www/matrix.mit.edu/element;
+	index index.html;
+
+	server_name matrix.mit.edu;
+
+	# Fix permalinks on mobile
+	location = / {
+		if ($http_user_agent ~ iPhone|Android) {
+			rewrite .* /mobile redirect;
+		}
+	}
+	
+
+	# I think if we wanted an easy ability to override
+	# Element files, we could do
+	#   try_files element/ $uri $uri/ @element;
+	# Right now, Element files take precedence
+
+	location / {
+		try_files $uri $uri/ @static;
+	}
+
+	# fallback to static instead
+	# otherwise, if we try $uri then $uri/ it would try to get / which is 403
+	location @static {
+		root /var/www/matrix.mit.edu/;
+		try_files $uri $uri/ index.html =404;
+    }
+
+    listen [::]:443 ssl; # managed by Certbot
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/matrix-synapse.mit.edu/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/matrix-synapse.mit.edu/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+	# Easier MXC URLs
+	location /media/ {
+		rewrite ^/media/(.*)$ /_matrix/media/v3/download/matrix.mit.edu/$1 last;
+	}
+
+	# Do reverse proxy media
+	location ~ ^(/_matrix/media) {
+		# note: do not add a path (even a single /) after the port in `proxy_pass`,
+		# otherwise nginx will canonicalise the URI and cause signature verification
+		# errors.
+		proxy_pass http://localhost:8008;
+		proxy_set_header X-Forwarded-For $remote_addr;
+		proxy_set_header X-Forwarded-Proto $scheme;
+		proxy_set_header Host $host;
+
+		# Nginx by default only allows file uploads up to 1M in size
+		# Increase client_max_body_size to match max_upload_size defined in homeserver.yaml
+		client_max_body_size 1G;
+
+		# Synapse responses may be chunked, which is an HTTP/1.1 feature.
+		proxy_http_version 1.1;
+	}
+	
+	location /.well-known/matrix {
+
+		add_header Access-Control-Allow-Origin *;
+		add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS";
+		add_header Access-Control-Allow-Headers "X-Requested-With, Content-Type, Authorization";
+		add_header Content-Type application/json;
+
+		location /.well-known/matrix/server {
+			return 200 '{"m.server": "matrix-synapse.mit.edu:8448"}';
+		}
+
+		location /.well-known/matrix/client {
+			return 200 '{"m.homeserver": {"base_url": "https://matrix-synapse.mit.edu"}}';
+		}
+	}
+
+	location /bridges/facebook {
+			proxy_pass http://127.0.0.1:29319;
+		}
+		
+}
+server {
+    if ($host = matrix.mit.edu) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+	listen 80;
+	listen [::]:80;
+
+	server_name matrix.mit.edu;
+    return 404; # managed by Certbot
+
+
+}

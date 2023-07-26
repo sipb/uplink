@@ -1,0 +1,118 @@
+server {
+
+	root /var/www/uplink.mit.edu/element;
+	index index.html;
+
+	server_name uplink.mit.edu;
+
+	# Matrix
+	#listen 8448 ssl http2 default_server;
+	#listen [::]:8448 ssl http2 default_server;
+
+	# Act accordingly on the root
+	location = / {
+		if ($http_user_agent ~ iPhone|Android) {
+			rewrite .* /mobile redirect;
+		}
+	}
+
+	# I think if we wanted an easy ability to override
+	# Element files, we could do
+	# try_files element/ $uri $uri/ @element;
+	# Right now, Element files take precedence
+
+	location / {
+		try_files $uri $uri/ @static;
+    }
+
+	# fallback to static instead
+	# otherwise, if we try $uri then $uri/ it will try to get / which is 403
+    location @static {
+    	root /var/www/uplink.mit.edu/;
+    	try_files $uri $uri/ index.html =404;
+     }
+
+	# Easier MXC URLs
+   	location /media/ {
+   		rewrite ^/media/(.*)$ /_matrix/media/v3/download/uplink.mit.edu/$1 last;
+	}
+
+	# Override directory
+	# location ~ ^/_matrix/client/.+/user_directory/search {
+		# rewrite .+ /_synapse/client/people_api/search;
+	# }
+
+
+    location ~ ^(/_matrix|/_synapse/client|/_synapse/admin) {
+   		# note: do not add a path (even a single /) after the port in `proxy_pass`,
+   		# otherwise nginx will canonicalise the URI and cause signature verification
+   		# errors.
+   		proxy_pass http://192.168.122.103;
+   		proxy_set_header X-Forwarded-For $remote_addr;
+   		proxy_set_header X-Forwarded-Proto https;
+   		proxy_set_header Host $host;
+   
+   		# Nginx by default only allows file uploads up to 1M in size
+   		# Increase client_max_body_size to match max_upload_size defined in homeserver.yaml
+   		client_max_body_size 50M;
+   
+   		# Synapse responses may be chunked, which is an HTTP/1.1 feature.
+   		proxy_http_version 1.1;
+   	}
+
+    location ~ ^(/klist|/whoami|/users|/lists) {
+	    proxy_pass http://192.168.122.103:8000;
+
+      	# They look slightly different than the Matrix ones
+	    # Copied from https://flask.palletsprojects.com/en/2.2.x/deploying/nginx/
+	    # TODO: format
+		proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Prefix /;
+    }
+
+
+    listen [::]:443 ssl; # managed by Certbot
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/matrix-synapse.mit.edu/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/matrix-synapse.mit.edu/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+    location /.well-known/matrix {
+
+		add_header Access-Control-Allow-Origin *;
+		add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS";
+		add_header Access-Control-Allow-Headers "X-Requested-With, Content-Type, Authorization";
+		add_header Content-Type application/json;
+
+		location /.well-known/matrix/server {
+			return 200 '{"m.server": "uplink.mit.edu:443"}';
+		}
+
+		# location /.well-known/matrix/client {
+			# return 200 '{"m.homeserver": {"base_url": "https://matrix-synapse.mit.edu"}}';
+		# }
+	}
+
+	location /bridges/facebook {
+		proxy_pass http://192.168.122.103:29319;
+	}
+	
+
+}
+server {
+    if ($host = uplink.mit.edu) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+	listen 80;
+	listen [::]:80;
+
+	server_name uplink.mit.edu;
+    return 404; # managed by Certbot
+
+
+}

@@ -89,7 +89,7 @@ class PeopleApiDirectoryResource(Resource):
             'results': matrix_results,
         }).encode()
 
-class UplinkSynapseService:
+class PeopleApiSynapseService:
     def __init__(self, config: dict, api: ModuleApi):
         self.api = api
         self.api.register_web_resource(

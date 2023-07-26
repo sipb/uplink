@@ -100,8 +100,8 @@ class PeopleApiSynapseService:
 
         _assert('people_api' in config, 'Config not given (people_api missing)')
         _assert(isinstance(config['people_api'], dict), 'people_api must be a dict')
-        _assert('client_id' in config, 'client_id missing')
-        _assert('client_secret' in config, 'client_secret missing')
+        _assert('client_id' in config['people_api'], 'client_id missing')
+        _assert('client_secret' in config['people_api'], 'client_secret missing')
         return config
 
     def __init__(self, config: dict, api: ModuleApi):

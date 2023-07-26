@@ -4,7 +4,7 @@ from canvas_class import Class
 from moira import MoiraAPI, MoiraList
 import asyncio
 import json
-from nio import AsyncClient, MatrixRoom, RoomMessageText, RoomVisibility, RoomCreateError, RoomCreateResponse, Api, GetOpenIDTokenResponse, RoomPreset, RoomResolveAliasResponse, RoomResolveAliasError, RoomPutStateResponse, RoomPutStateError, ErrorResponse
+from nio import AsyncClient, MatrixRoom, RoomMessageText, RoomVisibility, RoomCreateError, RoomCreateResponse, Api, GetOpenIDTokenResponse, RoomPreset, RoomResolveAliasResponse, RoomResolveAliasError, RoomPutStateResponse, RoomPutStateError, ErrorResponse, JoinedMembersResponse, JoinedMembersError, RoomMembersResponse, RoomMembersError
 import requests  # TODO: remove once this is handled from nio
 import json  # likewise
 from database import Database
@@ -16,6 +16,8 @@ db = Database()
 client = AsyncClient(config['homeserver'], config['username'])
 client.access_token = config['token']
 
+# TODO: convert to appservice? https://matrix.org/docs/guides/application-services
+# Which it seems like I should use Flask cause idt nio can do this
 
 class MatrixException(Exception):
     """
@@ -115,6 +117,7 @@ def generate_power_levels_for_list(l: MoiraList) -> dict:
                 "m.room.encryption": role_memacl,
                 "m.room.pinned_events": role_user, # anyone can pin!
                 "m.room.join_rules": role_memacl,
+                "im.vector.modular.widgets": role_user, # let anyone manage widgets! make this feature known!
             },
             "ban": role_owner,
             "kick": role_memacl,
@@ -208,7 +211,35 @@ async def sync_membership(l: MoiraList):
     Sync the Moira list membership to Matrix room members (add if necessary)
     """
     # TODO: implement
-    return NotImplementedError()
+    # some things about getting members
+    #
+    # (1) there is this API call, but it would require a PR to matrix-nio
+    # https://matrix.org/docs/api/#get-/_matrix/client/v3/rooms/-roomId-/members
+    # I can't get to incorporate the code but I can get a simpler `requests` version
+    # to work
+    # 
+    # (2) invites and joins are m.room.member events (https://spec.matrix.org/v1.5/client-server-api/#mroommember)
+    # client.room_get_state_event lets you query a specific person's event
+    # because the state key is the user ID, you can know what someone's state is
+    #
+    # (3) if this is too many calls for some reason, an alternative is to get all the room
+    # state at once through client.room_get_state. It returns a couple extra things
+    # that are probably not needed but also lets you do the power levels at once too
+    # because you can get the power levels and only send another power levels even if it 
+    # is really necessary
+
+    # BUT QUESTION: HOW CAN I KNOW IF AN EMAIL ADDRESS HAS ALREADY BEEN INVITED?
+    
+    client.room_invite()
+    # OH GOD IT'S ALSO MISSING THIS: https://matrix.org/docs/api/#post-/_matrix/client/v3/rooms/-roomId-/invite
+    # OH FUCK MATRIX-NIO IS STARTING TO ANNOY ME 
+    # TOO MANY THINGS MISSING
+    # I COULD PROBABLY EVENTUALLY WRITE THE NEEDED CODE FOR THEM AND SUBMIT PRs
+    # BUT ISSUES AREN'T BEING RESPONDED TO
+    # IT DOESN'T SEEM LIKE THERE IS ANY AVAILABLE MAINTAINER
+    # AND MAUTRIX BARELY HAS ANY DOCUMENTATION ON HOW TO MAKE A BOT
+
+    
 
 
 async def sync_moira_list(l: MoiraList, sync_moira_permissions=True):
@@ -219,7 +250,7 @@ async def sync_moira_list(l: MoiraList, sync_moira_permissions=True):
         # It's fine to pass the list name and no additional API calls are made
         # because getting the room alias does not use up any queries
         await create_list_room(l.list_name, sync_moira_permissions)
-    
+
 
 # TODO: exception handling
 # for instance, currently crashes if you try to create a list room for a list that doesn't exist
@@ -286,7 +317,51 @@ async def message_callback(room: MatrixRoom, event: RoomMessageText) -> None:
             await send_message('Yes' if await room_exists(alias) else 'No')
         except Exception as e:
             await send_message(f'{e}', 'm.notice')
-
+    if msg.startswith('!members'):
+        try:
+            alias = msg.split(' ')[1]
+            id = await room_id(alias)
+            response = await client.joined_members(id)
+            if isinstance(response, JoinedMembersResponse):
+                await send_message('\n'.join([member.display_name for member in response.members]))
+            else:
+                assert isinstance(response, JoinedMembersError)
+                raise MatrixException(response)
+        except Exception as e:
+            await send_message(f'{e}', 'm.notice')
+    if msg.startswith('!memberevents'):
+        # since this is not upstream, i am trying to extend the code
+        # but i can't get it to work
+        # with simple requests code it does work fine though
+        # (TODO: this should be for the membership things)
+        try:
+            alias = msg.split(' ')[1]
+            id = await room_id(alias)
+            response = await client.room_members(id, membership='invite')
+            print(response)
+            # TODO: parse
+            await send_message(f'{response}')
+        except Exception as e:
+            await send_message(f'{e}', 'm.notice')
+    if msg.startswith('!roomstate'):
+        try:
+            alias = msg.split(' ')[1]
+            id = await room_id(alias)
+            response = await client.room_get_state(id)
+            print(response)
+            await send_message(f'{response.events}')
+        except Exception as e:
+            await send_message(f'{e}', 'm.notice')
+    if msg.startswith('!invite'):
+        try:
+            alias = msg.split(' ')[1]
+            id = await room_id(alias)
+            user = msg.split(' ')[2]
+            response = await client.room_invite(id, user)
+            await send_message(f'{response}')
+        except Exception as e:
+            await send_message(f'{e}', 'm.notice')
+            
 
 # TODO: this should be handled from nio
 # and fix this issue: https://github.com/poljar/matrix-nio/issues/375

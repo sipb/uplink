@@ -8,6 +8,10 @@ import json
 # after all it is a big DAG of events and you can query for specific state events
 # so in the end, maaaaaaaybe this might do the trick instead, using one room as database
 
+# Uhh https://spec.matrix.org/latest/
+# State events [...] describe updates to a given piece of persistent information (‘state’) related to a room, such as the room’s name, topic, membership, participating servers, etc. State is modelled as a lookup table of key/value pairs per room, with each key being a tuple of state_key and event type. Each state event updates the value of a given key."
+# All the Moira info can be a state event. Whenever settings are updated it can be changed
+
 class Database:
     """
     Basically a persistent dict that (for now) writes and reads from a JSON file

@@ -1,0 +1,13 @@
+# Reference: https://github.com/pypa/sampleproject/blob/main/pyproject.toml
+
+[project]
+name = "uplink_synapse_module"
+version = "0.0.1"
+description = "MIT plugin for Synapse, the Matrix server"
+authors = [
+    {name = "Gabriel Rodriguez", email = "rgabriel@mit.edu"},
+]
+maintainers = [
+    {name = "SIPB Matrix", email = "matrix@mit.edu"},
+]
+

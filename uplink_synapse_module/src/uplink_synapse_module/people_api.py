@@ -79,6 +79,11 @@ class PeopleApiDirectoryResource(Resource):
             {'avatar_url': None, 'display_name': name, 'user_id': self.api.get_qualified_user_id(kerb)}
             for kerb, name in results
         ]
+
+        # TODO: if this user directory shows people who haven't signed up
+        # it is important to make sure they get emails
+        
+
         return json.dumps({
             'limited': limited,
             'results': matrix_results,

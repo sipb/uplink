@@ -21,7 +21,9 @@ You can include `{displayname}` and `{mxid}` and they will be replaced with the 
 modules:
     - module: uplink_synapse_module.UplinkFirstLoginModule
         config:
-            html: "..."       # HTML version of the message
+            html: |
+                Hello, world. You can use the YAML syntax...
+                ...to add a multiline string here.
             plain_text: "..." # Plain text version of the message, set to null to only send plain text
     # ...
 ```

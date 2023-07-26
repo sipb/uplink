@@ -1,36 +1,37 @@
 from twisted.web.resource import Resource
 from twisted.web.server import Request
 from synapse.module_api import ModuleApi
-import requests # TODO: use twisted instead, synchronous bad
 import json
 from synapse.http.servlet import parse_json_object_from_request
 
 PEOPLE_API_ENDPOINT = 'https://mit-people-v3.cloudhub.io/people/v3/people'
 
 class PeopleApiDirectoryResource(Resource):
-    def __init__(self, client_id, client_secret):
+    def __init__(self, api: ModuleApi, client_id, client_secret):
+        self.api = api
         self.client_id = client_id
         self.client_secret = client_secret
 
     # The actual endpoint is POST /_matrix/client/v3/user_directory/search
 
-    def find_names(self, search_query):
+    async def find_names(self, search_query):
         """
         Make a query to the people API by name or whatever it accepts
         Return a list of tuples of (kerb, display name)
         """
-        # TODO: please for the love of everything do not use requests
-        # use twisted and make sure it is asynchronous/consistent to the type
-        # of requests synapse makes
-        response = requests.get(PEOPLE_API_ENDPOINT, params={
-            'q': search_query,
-            'minimalData': True,
-        }, headers={
-            'client_id': self.client_id,
-            'client_secret': self.client_secret,
-        })
-        assert response.status_code == 200
-        results = json.loads(response.content.decode())['items']
+        response = await self.api.http_client.get_json(
+            PEOPLE_API_ENDPOINT,
+            args={
+                'q': search_query,
+                'minimalData': True,
+            },
+            headers={
+                'client_id': self.client_id,
+                'client_secret': self.client_secret,
+            }
+        )
+
+        results = response['items']
         return [
             # Yes, it says "keberos". That is what the API says.
             (result['keberosId'], result['displayName']) for result in results
@@ -71,6 +72,7 @@ class UplinkSynapseService:
         self.api.register_web_resource(
             path='/_synapse/client/people_api/search',
             resource=PeopleApiDirectoryResource(
+                api=api,
                 client_id=config['people_api']['client_id'],
                 client_secret=config['people_api']['client_secret'],
             ),

@@ -1,2 +1,2 @@
-from first_login import UplinkFirstLoginModule
-from people_api import PeopleApiSynapseService
+from uplink_synapse_module.first_login import UplinkFirstLoginModule
+from uplink_synapse_module.people_api import PeopleApiSynapseService

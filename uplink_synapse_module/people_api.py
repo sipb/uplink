@@ -4,6 +4,13 @@ from synapse.module_api import ModuleApi
 import json
 from synapse.http.servlet import parse_json_object_from_request
 
+# NOTE: It is possible that LDAP may be faster, e.g.:
+# ldapsearch -LLL -h win.mit.edu -b "OU=users,OU=Moira,DC=WIN,DC=MIT,DC=EDU" "displayName=ga*" displayName cn
+# It has Python bindings
+
+# * 0m1.003s for People API
+# * 0m0.718s for LDAP
+
 PEOPLE_API_ENDPOINT = 'https://mit-people-v3.cloudhub.io/people/v3/people'
 
 class PeopleApiDirectoryResource(Resource):
@@ -13,12 +20,14 @@ class PeopleApiDirectoryResource(Resource):
         self.client_secret = client_secret
 
     # The actual endpoint is POST /_matrix/client/v3/user_directory/search
+    # Served by https://github.com/matrix-org/synapse/blob/58f830511486271da72543dd20676b702bc52b2f/synapse/rest/client/user_directory.py#L32
 
     async def find_names(self, search_query):
         """
         Make a query to the people API by name or whatever it accepts
         Return a list of tuples of (kerb, display name)
         """
+        
         response = await self.api.http_client.get_json(
             PEOPLE_API_ENDPOINT,
             args={
@@ -44,8 +53,18 @@ class PeopleApiDirectoryResource(Resource):
         return f"{request.args}".encode()
 
     def render_POST(self, request: Request):
-        # TODO: check authentication
+        # TODO: Get authenticated user
+        self.api.get_user_by_req(request)
+        
+        # TODO: since this is a wrapper, it should call the actual synapse endpoint
+        # (or api call directly)
+        self.api._hs.get_user_directory_handler().search_users(
+            # ...
+        )
+
         # TODO: remember element sends one request for every keystroke,
+        # determine when to search the MIT directory, smartly
+
         request.setHeader(b"Content-Type", b"text/plain")
         body = parse_json_object_from_request(request)
         search_term = body['search_term']

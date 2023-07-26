@@ -32,7 +32,7 @@ class UplinkFirstLoginModule:
             'body': self.config['plain_text'] \
                 .format(
                     displayname=profile.display_name,
-                    username=user,
+                    mxid=user,
                 ),
         }
         if 'html' in self.config:
@@ -41,7 +41,7 @@ class UplinkFirstLoginModule:
                 'formatted_body': self.config['html'] \
                     .format(
                         displayname=profile.display_name,
-                        username=user,
+                        mxid=user,
                     )
             }
 

@@ -1,8 +1,10 @@
 from twisted.web.resource import Resource
 from twisted.web.server import Request
 from synapse.module_api import ModuleApi
+from synapse.module_api.errors import ConfigError
 import json
 from synapse.http.servlet import parse_json_object_from_request
+
 
 # NOTE: It is possible that LDAP may be faster, e.g.:
 # ldapsearch -LLL -h win.mit.edu -b "OU=users,OU=Moira,DC=WIN,DC=MIT,DC=EDU" "displayName=ga*" displayName cn
@@ -90,6 +92,18 @@ class PeopleApiDirectoryResource(Resource):
         }).encode()
 
 class PeopleApiSynapseService:
+    @staticmethod
+    def parse_config(config: dict) -> dict: 
+        def _assert(b, msg='invalid config'):
+            if not b:
+                raise ConfigError(msg)
+
+        _assert('people_api' in config, 'Config not given (people_api missing)')
+        _assert(isinstance(config['people_api'], dict), 'people_api must be a dict')
+        _assert('client_id' in config, 'client_id missing')
+        _assert('client_secret' in config, 'client_secret missing')
+        return config
+
     def __init__(self, config: dict, api: ModuleApi):
         self.api = api
         self.api.register_web_resource(
@@ -100,3 +114,5 @@ class PeopleApiSynapseService:
                 client_secret=config['people_api']['client_secret'],
             ),
         )
+
+

@@ -57,8 +57,7 @@ class PeopleApiDirectoryResource(Resource):
             results = results[:limit]
         matrix_results = [
             # TODO: this assumes everyone does set their username to their kerb, which is actually true right now
-            # TODO: don't hardcode, and remember to change to matrix.mit.edu (ideally read the config to know)
-            {'avatar_url': None, 'display_name': name, 'user_id': f'@{kerb}:uplink.mit.edu'}
+            {'avatar_url': None, 'display_name': name, 'user_id': self.api.get_qualified_user_id(kerb)}
             for kerb, name in results
         ]
         return json.dumps({

@@ -80,6 +80,7 @@ class UplinkFirstLoginModule:
             'room_id': room_id,
             'sender': notices_manager.server_notices_mxid,
             'content': {'disable': True},
+            'state_key': '',
         })
 
         # Send server notice

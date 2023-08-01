@@ -16,7 +16,7 @@ SIPB Matrix (codename Uplink) is SIPB's effort to bring the [Matrix](https://mat
 
 * [matrix-zephyr-bridge](https://github.com/sipb/matrix-zephyr-bridge): A bridge with Zephyr, an old messaging protocol still used by SIPB alumni
 
-* [mattermost-to-matrix-migration](https://github.com/gabrc52/mattermost-to-matrix-migration): A backfill bridge with Mattermost, in an attempt to move SIPB to Matrix while preserving full compatibility with Mattermost.
+* [mattermost-to-matrix](https://github.com/gabrc52/mattermost-to-matrix): A backfill bridge with Mattermost, in an attempt to move SIPB to Matrix while preserving full compatibility with Mattermost.
 
 * [uplink-moira-bot](https://github.com/sipb/uplink-moira-bot): Another deprecated attempt to build a Moira integration. It uses the deprecated Moira API we are not supposed to use.
 

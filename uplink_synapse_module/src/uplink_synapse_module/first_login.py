@@ -53,17 +53,15 @@ class UplinkFirstLoginModule:
             event_content=event_content,
         )
 
-
         # Disable URL previews
         # Note: It relies on implementation details and an undocumented
-        # (https://github.com/matrix-org/matrix-spec/issues/394) account data
-        # TODO: this does not work for some odd reason! however calling this directly works
-        res = await self.api._hs.get_account_data_handler().add_account_data_to_room(
-            user_id=user,
-            room_id=event.room_id,
-            account_data_type='org.matrix.room.preview_urls',
-            content={'disable': True},
-        )
+        # (https://github.com/matrix-org/matrix-spec/issues/394) event
+        event = await self.api.create_and_send_event_into_room({
+            'type': 'org.matrix.room.preview_urls',
+            'room_id': event.room_id,
+            'sender': self.api._hs.get_server_notices_manager().server_notices_mxid,
+            'content': {'disable': True},
+        })
 
         print("done adding account data?", res)
 

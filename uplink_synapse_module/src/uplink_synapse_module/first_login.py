@@ -60,6 +60,7 @@ class UplinkFirstLoginModule:
                     )
             }
 
+        # Note: It relies on implementation details
         notices_manager = self.api._hs.get_server_notices_manager()
 
         # Create server notices room
@@ -77,14 +78,13 @@ class UplinkFirstLoginModule:
         event = await self.api.create_and_send_event_into_room({
             'type': 'org.matrix.room.preview_urls',
             'room_id': room_id,
-            'sender': self.api._hs.get_server_notices_manager().server_notices_mxid,
+            'sender': notices_manager.server_notices_mxid,
             'content': {'disable': True},
         })
 
         # Send server notice
-        # Note: It relies on implementation details
         # The "correct" way would be to use the admin REST API
-        event = await self.api._hs.get_server_notices_manager().send_notice(
+        event = await notices_manager.send_notice(
             user_id=user,
             event_content=event_content,
         )

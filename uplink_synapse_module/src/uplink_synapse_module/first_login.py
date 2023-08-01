@@ -31,6 +31,11 @@ class UplinkFirstLoginModule:
     async def on_user_registration(self, user: str) -> None:
         print(f'{user} registered!')
 
+        for prefix in self.config.skip_prefixes:
+            if user.startswith(prefix):
+                print("skipping first login logic because user starts with", prefix)
+                return
+
         with open('/tmp/uplink.log', 'a') as f:
             f.write(f'on_user_registration({user}) called\n')
 

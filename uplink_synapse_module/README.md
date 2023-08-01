@@ -17,14 +17,19 @@ See the following configuration options.
 
 You can include `{displayname}` and `{mxid}` and they will be replaced with the display name and mxid of the user who just signed up, respectively, using the Python `str.format` function.
 
+`skip_prefixes` is to avoid welcoming ghost (bridged) users. Otherwise, this plugin would cause app services to be ratelimited(!)
+
 ```yaml
 modules:
     - module: uplink_synapse_module.UplinkFirstLoginModule
         config:
-            html: |
+            skip_prefixes:
+                - "@_mattermost_"
+                - "@_zephyr_"
+            plain_text: |
                 Hello, world. You can use the YAML syntax...
                 ...to add a multiline string here.
-            plain_text: "..." # Plain text version of the message, set to null to only send plain text
+            html: "..." # HTML version of the message, set to null to only send plain text
     # ...
 ```
 

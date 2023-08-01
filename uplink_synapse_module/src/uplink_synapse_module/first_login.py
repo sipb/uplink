@@ -60,6 +60,27 @@ class UplinkFirstLoginModule:
                     )
             }
 
+        notices_manager = self.api._hs.get_server_notices_manager()
+
+        # Create server notices room
+        room_id = await notices_manager.get_or_create_notice_room_for_user(user)
+        
+        # Invite user to server notices room
+        await notices_manager.maybe_invite_user_to_room(user, room_id)
+
+        # Auto-join the user to the room
+        await self.api.update_room_membership(user, user, room_id, 'join')
+
+        # Disable URL previews
+        # Note: It relies on implementation details and an undocumented
+        # (https://github.com/matrix-org/matrix-spec/issues/394) event
+        event = await self.api.create_and_send_event_into_room({
+            'type': 'org.matrix.room.preview_urls',
+            'room_id': room_id,
+            'sender': self.api._hs.get_server_notices_manager().server_notices_mxid,
+            'content': {'disable': True},
+        })
+
         # Send server notice
         # Note: It relies on implementation details
         # The "correct" way would be to use the admin REST API
@@ -67,15 +88,5 @@ class UplinkFirstLoginModule:
             user_id=user,
             event_content=event_content,
         )
-
-        # Disable URL previews
-        # Note: It relies on implementation details and an undocumented
-        # (https://github.com/matrix-org/matrix-spec/issues/394) event
-        event = await self.api.create_and_send_event_into_room({
-            'type': 'org.matrix.room.preview_urls',
-            'room_id': event.room_id,
-            'sender': self.api._hs.get_server_notices_manager().server_notices_mxid,
-            'content': {'disable': True},
-        })
 
 

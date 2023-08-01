@@ -11,3 +11,6 @@ maintainers = [
     {name = "SIPB Matrix", email = "matrix@mit.edu"},
 ]
 
+dependencies = [
+    "dataclasses-json"
+]

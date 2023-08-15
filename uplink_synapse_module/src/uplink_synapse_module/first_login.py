@@ -70,7 +70,7 @@ class UplinkFirstLoginModule:
         await notices_manager.maybe_invite_user_to_room(user, room_id)
 
         # Auto-join the user to the room
-        await self.api.update_room_membership(user, user, room_id, 'join')
+        # await self.api.update_room_membership(user, user, room_id, 'join')
 
         # Disable URL previews
         # Note: It relies on implementation details and an undocumented

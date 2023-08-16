@@ -1,12 +1,9 @@
-from twisted.web.resource import Resource
-from twisted.web.server import NOT_DONE_YET, Request
+from twisted.web.server import Request
 from synapse.module_api import ModuleApi
 from synapse.module_api.errors import ConfigError
 from synapse.api.errors import HttpResponseException
-import json
 from synapse.http.servlet import parse_json_object_from_request
-from synapse.module_api import run_in_background
-
+from .util import AsyncResource, _wrap_for_html_exceptions, _return_json
 
 # NOTE: It is possible that LDAP may be faster, e.g.:
 # ldapsearch -LLL -h win.mit.edu -b "OU=users,OU=Moira,DC=WIN,DC=MIT,DC=EDU" "displayName=ga*" displayName cn
@@ -15,41 +12,39 @@ from synapse.module_api import run_in_background
 # * 0m1.003s for People API
 # * 0m0.718s for LDAP
 
+# TODO: probably override if we wish to debug the header behavior
 PEOPLE_API_ENDPOINT = 'https://mit-people-v3.cloudhub.io/people/v3/people'
-
-class AsyncResource(Resource):
-    """
-    Extends twisted.web.Resource to add support for async_render_X methods
-    
-    Stolen from https://github.com/matrix-org/matrix-synapse-saml-mozilla
-
-    IDK why it's the default
-    """
-
-    def render(self, request: Request):
-        method = request.method.decode("ascii")
-        m = getattr(self, "async_render_" + method, None)
-        if not m and method == "HEAD":
-            m = getattr(self, "async_render_GET", None)
-        if not m:
-            return super().render(request)
-
-        async def run():
-            with request.processing():
-                return await m(request)
-
-        run_in_background(run)
-        return NOT_DONE_YET
 
 
 class PeopleApiDirectoryResource(AsyncResource):
-    def __init__(self, api: ModuleApi, client_id, client_secret):
+    client_id: str
+    client_secret: str
+    blocked_prefixes: list[str]
+
+    def __init__(self, api: ModuleApi, client_id, client_secret, blocked_prefixes):
+        super().__init__()
         self.api = api
         self.client_id = client_id
         self.client_secret = client_secret
+        # Hide 
+        self.blocked_prefixes = blocked_prefixes
 
     # The actual endpoint is POST /_matrix/client/v3/user_directory/search
     # Served by https://github.com/matrix-org/synapse/blob/58f830511486271da72543dd20676b702bc52b2f/synapse/rest/client/user_directory.py#L32
+
+    @staticmethod
+    def should_search_people_api(search_term):
+        """
+        Determine if we should search the people API at all
+        """
+        # TODO: make this configurable (in order to disable people api)
+        return len(search_term) > 3
+    
+    def is_allowed_mxid(self, mxid: str):
+        """
+        check that a MXID is not blocked (i.e. not a ghost)
+        """
+        return not any(mxid.startswith(f'@{prefix}') for prefix in self.blocked_prefixes)
 
     async def find_names(self, search_query):
         """
@@ -57,6 +52,9 @@ class PeopleApiDirectoryResource(AsyncResource):
         Return a list of tuples of (kerb, display name)
         """
         
+        if not self.should_search_people_api(search_query):
+            return []
+
         # TODO: fix - this gives a 403
         b'{ "error": "multiple_clients", "description": "there are more than one client_id or client_secret" }'
         # as if you sent the header duplicated
@@ -89,54 +87,66 @@ class PeopleApiDirectoryResource(AsyncResource):
             (result['keberosId'], result['displayName']) for result in results
         ]
 
-    def render_GET(self, request: Request):
-        # This get request shall be for debugging, because only POST is used
-        request.setHeader(b"Content-Type", b"text/plain")
-        return f"{request.args}".encode()
-
+    @_wrap_for_html_exceptions
     async def async_render_POST(self, request: Request):
         requester = await self.api.get_user_by_req(request)
-        print(requester)
+        user_id = requester.user.to_string()
         
-        request.setHeader(b"Content-Type", b"text/plain")
         body = parse_json_object_from_request(request)
         search_term = body['search_term']
-        limit = body.get('limit') or 50 # number of results to give
+
+        # same behavior as regular Synapse
+        limit = int(body.get("limit", 10))
+        limit = max(min(limit, 50), 0)
         
-        # TODO: this gives a sqlite error?!
-        # probably just do the HTTP request tbh
-        # like this doesn't look supported lol
         synapse_results_promise = self.api._hs.get_user_directory_handler().search_users(
-            requester.user,
+            user_id,
             search_term,
-            limit,
+            limit + 5, # search 5 more since we are removing bridged users
         )
 
-        # TODO: remember element sends one request for every keystroke,
-        # determine when to search the MIT directory, smartly
+        people_response = await self.find_names(search_term)
 
-        people_results = await self.find_names(search_term)
-        limited = False
-        # apply limit - TODO this is wrong, the combined list must respect the limit
-        if limit and len(people_results) > limit:
-            people_results = people_results[:limit]
+        synapse_response = await synapse_results_promise
+        synapse_results = synapse_response['results']
 
-        synapse_results = await synapse_results_promise
+        # local users who are not ghosts
+        local_synapse_results = [
+            result for result in synapse_results
+            if result['user_id'].endswith(self.api.server_name)
+            and self.is_allowed_mxid(result['user_id'])
+        ]
+        # any user who does not belong to this homeserver
+        remote_synapse_results = [
+            result for result in synapse_results
+            if not result['user_id'].endswith(self.api.server_name)
+        ]
 
-        # TODO: combine smartly - use the limit
-        matrix_results = [
-            # TODO: this assumes everyone does set their username to their kerb, which is actually true right now
-            {'avatar_url': None, 'display_name': name, 'user_id': self.api.get_qualified_user_id(kerb)}
-            for kerb, name in people_results
-        ] + synapse_results
+        local_users_set = {result['user_id'] for result in local_synapse_results}
 
-        # TODO: if this user directory shows people who haven't signed up
-        # it is important to make sure they get emails
-        
+        # remove duplicates - only people who have not signed up
+        people_results = [
+            {'avatar_url': None, 'display_name': f'{name} - not signed up', 'user_id': self.api.get_qualified_user_id(kerb)}
+            for kerb, name in people_response
+            if self.api.get_qualified_user_id(kerb) not in local_users_set
+        ]
+
+        # Overall, we want the concatenation of
+        # * first we prefer local users who have signed up
+        # * next local users who have not signed up
+        # * and finally, federated users
+        matrix_results = local_synapse_results + people_results + remote_synapse_results
+
+        limited = synapse_response['limited']
+        if len(matrix_results) > limit:
+            matrix_results = matrix_results[:limit]
+            limited = True
+
         _return_json({
             'limited': limited,
             'results': matrix_results,
-        })
+        }, request)
+
 
 class PeopleApiSynapseService:
     @staticmethod
@@ -159,30 +169,7 @@ class PeopleApiSynapseService:
                 api=api,
                 client_id=config['people_api']['client_id'],
                 client_secret=config['people_api']['client_secret'],
+                blocked_prefixes=config.get('blocked_prefixes', []),
             ),
         )
 
-
-def _return_json(json_obj, request: Request):
-    """
-    Returns JSON via an AsyncResource. Stolen from the same repo.
-    """
-
-    json_bytes = json.dumps(json_obj).encode("utf-8")
-
-    request.setHeader(b"Content-Type", b"application/json")
-    request.setHeader(b"Content-Length", b"%d" % (len(json_bytes),))
-    request.setHeader(b"Cache-Control", b"no-cache, no-store, must-revalidate")
-    request.setHeader(b"Access-Control-Allow-Origin", b"*")
-    request.setHeader(
-        b"Access-Control-Allow-Methods", b"GET, POST, PUT, DELETE, OPTIONS"
-    )
-    request.setHeader(
-        b"Access-Control-Allow-Headers",
-        b"Origin, X-Requested-With, Content-Type, Accept, Authorization",
-    )
-    request.write(json_bytes)
-    try:
-        request.finish()
-    except RuntimeError as e:
-        print("[uplink_synapse_module] Connection disconnected before response was written: %r", e)

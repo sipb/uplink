@@ -45,4 +45,8 @@ modules:
         people_api:
             client_id: client_id_goes_here
             client_secret: client_secret_goes_here
+        # optional - block prefixes to include from search results
+        blocked_prefixes:
+            - mattermost_
+            - _zephyr_
 ```

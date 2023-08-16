@@ -58,15 +58,6 @@ class PeopleApiDirectoryResource(AsyncResource):
         if not self.should_search_people_api(search_query):
             return []
 
-        # TODO: fix - this gives a 403
-        b'{ "error": "multiple_clients", "description": "there are more than one client_id or client_secret" }'
-        # as if you sent the header duplicated
-
-        # options
-        # (1) random thought but would using bytes instead fix it?
-        # (2) report the bug to synapse
-        # (3) ditch this API and use aiohttp or something instead
-
         try:
             response = await self.api.http_client.get_json(
                 PEOPLE_API_ENDPOINT,
@@ -75,8 +66,8 @@ class PeopleApiDirectoryResource(AsyncResource):
                     'minimalData': 'true',
                 },
                 headers={
-                    'client_id': self.client_id,
-                    'client_secret': self.client_secret,
+                    'client_id': [self.client_id],
+                    'client_secret': [self.client_secret],
                 }
             )
         except HttpResponseException as e:

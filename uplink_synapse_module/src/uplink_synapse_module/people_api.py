@@ -21,23 +21,26 @@ class PeopleApiDirectoryResource(AsyncResource):
     client_secret: str
     blocked_prefixes: list[str]
 
-    def __init__(self, api: ModuleApi, client_id, client_secret, blocked_prefixes):
+    def __init__(self, api: ModuleApi, client_id, client_secret, blocked_prefixes, enable_people_api):
         super().__init__()
         self.api = api
         self.client_id = client_id
         self.client_secret = client_secret
-        # Hide 
+        # Hide ghosts
         self.blocked_prefixes = blocked_prefixes
+        self.enable_people_api = enable_people_api
 
     # The actual endpoint is POST /_matrix/client/v3/user_directory/search
     # Served by https://github.com/matrix-org/synapse/blob/58f830511486271da72543dd20676b702bc52b2f/synapse/rest/client/user_directory.py#L32
 
-    @staticmethod
-    def should_search_people_api(search_term):
+    def should_search_people_api(self, search_term):
         """
         Determine if we should search the people API at all
         """
-        # TODO: make this configurable (in order to disable people api)
+        if not self.enable_people_api:
+            return False
+        # searching just 3 letters is unreasonable, IMO.
+        # it would result way too many results, and slow everything down
         return len(search_term) > 3
     
     def is_allowed_mxid(self, mxid: str):
@@ -58,6 +61,11 @@ class PeopleApiDirectoryResource(AsyncResource):
         # TODO: fix - this gives a 403
         b'{ "error": "multiple_clients", "description": "there are more than one client_id or client_secret" }'
         # as if you sent the header duplicated
+
+        # options
+        # (1) random thought but would using bytes instead fix it?
+        # (2) report the bug to synapse
+        # (3) ditch this API and use aiohttp or something instead
 
         try:
             response = await self.api.http_client.get_json(
@@ -159,6 +167,7 @@ class PeopleApiSynapseService:
         _assert(isinstance(config['people_api'], dict), 'people_api must be a dict')
         _assert('client_id' in config['people_api'], 'client_id missing')
         _assert('client_secret' in config['people_api'], 'client_secret missing')
+        _assert('enable' in config['people_api'], 'do you want to enable people api?')
         return config
 
     def __init__(self, config: dict, api: ModuleApi):
@@ -170,6 +179,7 @@ class PeopleApiSynapseService:
                 client_id=config['people_api']['client_id'],
                 client_secret=config['people_api']['client_secret'],
                 blocked_prefixes=config.get('blocked_prefixes', []),
+                enable_people_api=config['people_api']['enable'],
             ),
         )
 

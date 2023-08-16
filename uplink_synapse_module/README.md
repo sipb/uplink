@@ -43,6 +43,7 @@ modules:
     - module: uplink_synapse_module.PeopleApiSynapseService
     config:
         people_api:
+            enable: true # or false, if you don't want to use the people api
             client_id: client_id_goes_here
             client_secret: client_secret_goes_here
         # optional - block prefixes to include from search results

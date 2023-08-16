@@ -86,6 +86,10 @@ class PeopleApiDirectoryResource(AsyncResource):
             (result['keberosId'], result['displayName']) for result in results
         ]
 
+    # TODO: this would all be great except for the simple fact that
+    # Element, at least on web, decides to re-sort the results returned by Synapse
+    # so my ordering isn't actually respected
+
     @_wrap_for_html_exceptions
     async def async_render_POST(self, request: Request):
         requester = await self.api.get_user_by_req(request)
@@ -124,6 +128,7 @@ class PeopleApiDirectoryResource(AsyncResource):
         local_users_set = {result['user_id'] for result in local_synapse_results}
 
         # remove duplicates - only people who have not signed up
+        # TODO: sort by relevance somehow
         people_results = [
             {'avatar_url': None, 'display_name': f'{name} - not signed up', 'user_id': self.api.get_qualified_user_id(kerb)}
             for kerb, name in people_response

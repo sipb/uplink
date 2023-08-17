@@ -177,6 +177,8 @@ class PeopleApiSynapseService:
 
     def __init__(self, config: dict, api: ModuleApi):
         self.api = api
+        # TODO: we want another resource (query specific user ID)
+        # so put_child and stuff (refer to mozilla saml repo)
         self.api.register_web_resource(
             path='/_synapse/client/people_api/search',
             resource=PeopleApiDirectoryResource(
@@ -189,3 +191,4 @@ class PeopleApiSynapseService:
             ),
         )
 
+    

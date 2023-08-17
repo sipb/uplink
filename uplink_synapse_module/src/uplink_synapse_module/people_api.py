@@ -116,13 +116,13 @@ class PeopleApiDirectoryResource(AsyncResource):
         # local users who are not ghosts
         local_synapse_results = [
             result for result in synapse_results
-            if result['user_id'].endswith(self.api.server_name)
+            if self.api.is_mine(result['user_id'])
             and self.is_allowed_mxid(result['user_id'])
         ]
         # any user who does not belong to this homeserver
         remote_synapse_results = [
             result for result in synapse_results
-            if not result['user_id'].endswith(self.api.server_name)
+            if not self.api.is_mine(result['uesr_id'])
         ]
 
         local_users_set = {result['user_id'] for result in local_synapse_results}

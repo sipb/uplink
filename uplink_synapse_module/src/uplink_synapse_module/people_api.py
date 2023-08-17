@@ -102,7 +102,9 @@ class PeopleApiDirectoryResource(AsyncResource):
         limit = int(body.get("limit", 10))
         limit = max(min(limit, 50), 0)
         
-        synapse_results_promise = self.api._hs.get_user_directory_handler().search_users(
+        directory_handler = self.api._hs.get_user_directory_handler()
+
+        synapse_results_promise = directory_handler.search_users(
             user_id,
             search_term,
             limit + 5, # search 5 more since we are removing bridged users
@@ -127,8 +129,11 @@ class PeopleApiDirectoryResource(AsyncResource):
 
         local_users_set = {result['user_id'] for result in local_synapse_results}
 
+        # TODO: this code is wrong, if your name completely differs from the people API name,
+        # you will not show up in the synapse results so you'd incorrectly show as not signed up
+
         # remove duplicates - only people who have not signed up
-        # TODO: sort by relevance somehow
+        # TODO: sort by relevance somehow or limit the amount of people api results to like 3
         people_results = [
             {'avatar_url': None, 'display_name': f'{name} - not signed up', 'user_id': self.api.get_qualified_user_id(kerb)}
             for kerb, name in people_response

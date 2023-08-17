@@ -42,6 +42,7 @@ modules:
     # ...
     - module: uplink_synapse_module.PeopleApiSynapseService
     config:
+        allow_remote_results: false # whether to allow users from other homeservers in the directory
         people_api:
             enable: true # or false, if you don't want to use the people api
             client_id: client_id_goes_here

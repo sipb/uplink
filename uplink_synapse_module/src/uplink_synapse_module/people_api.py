@@ -21,7 +21,7 @@ class PeopleApiDirectoryResource(AsyncResource):
     client_secret: str
     blocked_prefixes: list[str]
 
-    def __init__(self, api: ModuleApi, client_id, client_secret, blocked_prefixes, enable_people_api, blacklisted_homeservers):
+    def __init__(self, api: ModuleApi, client_id, client_secret, blocked_prefixes, enable_people_api, blacklisted_homeservers, allow_remote_results):
         super().__init__()
         self.api = api
         self.client_id = client_id
@@ -29,6 +29,7 @@ class PeopleApiDirectoryResource(AsyncResource):
         self.blocked_prefixes = blocked_prefixes # Hide ghosts
         self.enable_people_api = enable_people_api
         self.blacklisted_homeservers = blacklisted_homeservers
+        self.allow_remote_results = allow_remote_results
 
     # The actual endpoint is POST /_matrix/client/v3/user_directory/search
     # Served by https://github.com/matrix-org/synapse/blob/58f830511486271da72543dd20676b702bc52b2f/synapse/rest/client/user_directory.py#L32
@@ -126,10 +127,11 @@ class PeopleApiDirectoryResource(AsyncResource):
             and self.is_allowed_mxid(result['user_id'])
         ]
         # any user who does not belong to this homeserver
+        # TODO: alternatively, limit to like 3(?)
         remote_synapse_results = [
             result for result in synapse_results
             if not self.api.is_mine(result['user_id'])
-        ]
+        ] if self.allow_remote_results else []
 
         local_users_set = {result['user_id'] for result in local_synapse_results}
 
@@ -168,6 +170,7 @@ class PeopleApiSynapseService:
             if not b:
                 raise ConfigError(msg)
 
+        _assert('allow_remote_results' in config, 'missing config allow_remote_results')
         _assert('people_api' in config, 'Config not given (people_api missing)')
         _assert(isinstance(config['people_api'], dict), 'people_api must be a dict')
         _assert('client_id' in config['people_api'], 'client_id missing')
@@ -188,7 +191,7 @@ class PeopleApiSynapseService:
                 blocked_prefixes=config.get('blocked_prefixes', []),
                 enable_people_api=config['people_api']['enable'],
                 blacklisted_homeservers=config.get('blacklisted_homeservers', []),
+                allow_remote_results=config.get('allow_remote_results'),
             ),
         )
 
-    

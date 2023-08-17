@@ -50,4 +50,6 @@ modules:
         blocked_prefixes:
             - mattermost_
             - _zephyr_
+        blacklisted_homeservers:
+            - uplink.mit.edu
 ```

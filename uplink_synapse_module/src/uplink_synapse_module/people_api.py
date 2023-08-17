@@ -21,14 +21,14 @@ class PeopleApiDirectoryResource(AsyncResource):
     client_secret: str
     blocked_prefixes: list[str]
 
-    def __init__(self, api: ModuleApi, client_id, client_secret, blocked_prefixes, enable_people_api):
+    def __init__(self, api: ModuleApi, client_id, client_secret, blocked_prefixes, enable_people_api, blacklisted_homeservers):
         super().__init__()
         self.api = api
         self.client_id = client_id
         self.client_secret = client_secret
-        # Hide ghosts
-        self.blocked_prefixes = blocked_prefixes
+        self.blocked_prefixes = blocked_prefixes # Hide ghosts
         self.enable_people_api = enable_people_api
+        self.blacklisted_homeservers = blacklisted_homeservers
 
     # The actual endpoint is POST /_matrix/client/v3/user_directory/search
     # Served by https://github.com/matrix-org/synapse/blob/58f830511486271da72543dd20676b702bc52b2f/synapse/rest/client/user_directory.py#L32
@@ -45,9 +45,13 @@ class PeopleApiDirectoryResource(AsyncResource):
     
     def is_allowed_mxid(self, mxid: str):
         """
-        check that a MXID is not blocked (i.e. not a ghost)
+        check that a MXID is not blocked (i.e. not a ghost, and not in a blacklisted homeserver)
         """
-        return not any(mxid.startswith(f'@{prefix}') for prefix in self.blocked_prefixes)
+        localpart, homeserver = mxid[1:].split(':', maxsplit=2)
+
+        return \
+            not any(localpart.startswith(prefix) for prefix in self.blocked_prefixes) \
+            and not any (homeserver == hs for hs in self.blacklisted_homeservers)
 
     async def find_names(self, search_query):
         """
@@ -107,7 +111,7 @@ class PeopleApiDirectoryResource(AsyncResource):
         synapse_results_promise = directory_handler.search_users(
             user_id,
             search_term,
-            limit + 5, # search 5 more since we are removing bridged users
+            limit + 10, # search 10 more since we are removing bridged users and blacklisted homeservers
         )
 
         people_response = await self.find_names(search_term)
@@ -181,6 +185,7 @@ class PeopleApiSynapseService:
                 client_secret=config['people_api']['client_secret'],
                 blocked_prefixes=config.get('blocked_prefixes', []),
                 enable_people_api=config['people_api']['enable'],
+                blacklisted_homeservers=config.get('blacklisted_homeservers', []),
             ),
         )
 

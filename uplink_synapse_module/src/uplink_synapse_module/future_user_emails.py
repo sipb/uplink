@@ -21,6 +21,9 @@ BASE_URL = "https://matrix.mit.edu"
 ROOM_BASE_URL = f"{BASE_URL}/#/room/"
 
 # TODO: make template configurable
+# uh while it would be nice to make it configurable I think there may be more
+# hardcoded behavior based on our assumptions. Something else which would be nice
+# is to write a blog post about how everything was put together.
 @dataclass_json
 @dataclass
 class Config:
@@ -49,12 +52,17 @@ def get_username(mxid: str) -> str:
     return localpart
 
 def room_is_space(state_events: StateMap[EventBase]):
-    creation_event = state_events.get('m.room.create')
+    creation_event = state_events.get(('m.room.create', ''))
     if not creation_event:
         return False
     room_type = creation_event.content.get('type')
     return room_type == 'm.space'
 
+def get_displayname(state_events: StateMap[EventBase], user: str):
+    member_event = state_events.get(('m.room.member', user.lower()))
+    if not member_event:
+        return get_username(user)
+    return member_event.content.get('displayname') or get_username(user)
 
 class UplinkFutureUserEmailer:
     def __init__(self, config: Config, api: ModuleApi):
@@ -114,7 +122,8 @@ class UplinkFutureUserEmailer:
         
         # TODO: remove the eom
         if is_dm:
-            subject = f"{get_username(event.sender)} has DMed you on Matrix eom"
+            # TODO: do we want display name or kerb?
+            subject = f"{get_displayname(event.sender)} has DMed you on Matrix eom"
         else:
             subject = f"You have invited to a {'space' if is_space else 'room'} on Matrix eom"
 
@@ -123,6 +132,7 @@ class UplinkFutureUserEmailer:
             subject=subject,
             app_name='SIPB Matrix',
             # TODO: write the email contents
+            # also make it sort of nice - add a pigeon idk
             html='',
             text='',
         )

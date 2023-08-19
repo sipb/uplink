@@ -38,11 +38,12 @@ def kerb_exists(kerb):
     except dns.resolver.NXDOMAIN:
         return False
 
-MATRIX_SPIEL_PLAIN = "Matrix is a free and open source messaging platform. You can chat on " \
-    "your laptop by opening matrix.mit.edu on a web browser, or on your phone by downloading " \
+MATRIX_SPIEL_BASE = "Matrix is a free and open source messaging platform. You can chat on " \
+    "your laptop by opening {link} on a web browser, or on your phone by downloading " \
     "the Element app and changing your server to matrix.mit.edu by clicking the \"Edit\" " \
     "button next to matrix.org."
-MATRIX_SPIEL_HTML = MATRIX_SPIEL_PLAIN.replace("matrix.mit.edu", '<a href="https://matrix.mit.edu">matrix.mit.edu</a>', count=1)
+MATRIX_SPIEL_PLAIN = MATRIX_SPIEL_BASE.format(link='matrix.mit.edu')
+MATRIX_SPIEL_HTML = MATRIX_SPIEL_BASE.format(link='<a href="https://matrix.mit.edu">matrix.mit.edu</a>')
 
 ROOM_SPIEL = "A room is similar to a group chat or channel on other platforms."
 SPACE_SPIEL = "A space is similar to a workspace or server on other platforms."

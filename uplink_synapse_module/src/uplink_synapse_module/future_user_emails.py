@@ -171,7 +171,7 @@ class UplinkFutureUserEmailer:
         
         emailer = self.api._hs.get_send_email_handler()
 
-        inviter = get_displayname(event.sender)
+        inviter = get_displayname(state_events, event.sender)
 
         email = f'{kerb}@mit.edu'
         print(f'sending email to {email}')

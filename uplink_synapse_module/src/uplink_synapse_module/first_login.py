@@ -5,6 +5,21 @@ from twisted.web.server import Request
 from synapse.module_api import ModuleApi
 from synapse.module_api.errors import ConfigError
 
+STICKERS_ACCOUNT_DATA = {
+    "stickerpicker": {
+        "content": {
+            "type": "m.stickerpicker",
+            "url": "https://matrix.mit.edu/stickerpicker/web/?theme=$theme",
+            "name": "Stickerpicker",
+            "creatorUserId": "@rgabriel:matrix.mit.edu",
+            "data": {}
+        },
+        "state_key": "stickerpicker",
+        "type": "m.widget",
+        "id": "stickerpicker"
+    }
+}
+
 @dataclass_json
 @dataclass
 class Config:
@@ -90,4 +105,6 @@ class UplinkFirstLoginModule:
             event_content=event_content,
         )
 
+        # Enable sticker picker
+        await self.api.account_data_manager.put_global(user, 'm.widgets', STICKERS_ACCOUNT_DATA)
 

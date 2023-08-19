@@ -84,30 +84,31 @@ class UplinkFutureUserEmailer:
         Process room invites and send emails accordingly
         """
         # TODO: remove all of the logging
-        pprint(event)
-        pprint(state_events)
 
         if not event_is_invite(event):
             # We only care about invites
             print('not an invite!')
             return
 
+        pprint(event)
+        pprint(state_events)
+
         user = get_invited_user(event)
 
         if not self.api.is_mine(user):
             # We don't care about external users (receiver)
-            print('receiver not mine!')
+            print(f'receiver {user} not mine!')
             return
 
         if not self.api.is_mine(event.sender):
             # We don't care about external users (sender)
             # TODO: or do we?
-            print('sender not mine!')
+            print(f'sender {event.sender} not mine!')
             return
 
-        if self.api.check_user_exists(user) is not None:
+        if await self.api.check_user_exists(user) is not None:
             # We only care about inexistent users
-            print('user already exists!')
+            print(f'user {user} already exists: {self.api.check_user_exists(user)}')
             return
 
         is_dm = is_invitation_dm(event)
@@ -127,6 +128,9 @@ class UplinkFutureUserEmailer:
         else:
             subject = f"You have invited to a {'space' if is_space else 'room'} on Matrix eom"
 
+        # TODO: show valuable info - room name if it is a room and so on
+        # member count perhaps
+        # TODO: and don't forget links and instructions, incl. mobile!
         emailer.send_email(
             email_address=f'{kerb}@mit.edu',
             subject=subject,

@@ -188,17 +188,18 @@ class UplinkFutureUserEmailer:
             print('Inexistent kerb!')
             return
         
-        emailer = self.api._hs.get_send_email_handler()
 
         inviter = get_displayname(state_events, event.sender)
+        room_link = make_room_permalink(id_or_canonical_alias(event, state_events))
 
         email = f'{kerb}@mit.edu'
         print(f'sending email to {email}')
+        emailer = self.api._hs.get_send_email_handler()
         await emailer.send_email(
             email_address=email,
             subject=make_email_subject(inviter, is_dm, is_space),
             app_name='SIPB Matrix',
-            html=make_email_body_html(inviter, is_dm, is_space, room_name),
-            text=make_email_body_plain(inviter, is_dm, is_space, room_name),
+            html=make_email_body_html(inviter, is_dm, is_space, room_name, room_link),
+            text=make_email_body_plain(inviter, is_dm, is_space, room_name, room_link),
         )
         

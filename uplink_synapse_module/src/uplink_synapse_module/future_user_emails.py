@@ -128,11 +128,14 @@ class UplinkFutureUserEmailer:
         else:
             subject = f"You have invited to a {'space' if is_space else 'room'} on Matrix eom"
 
+
+        email = f'{kerb}@mit.edu'
+        print(f'sending email to {email}')
         # TODO: show valuable info - room name if it is a room and so on
         # member count perhaps
         # TODO: and don't forget links and instructions, incl. mobile!
-        emailer.send_email(
-            email_address=f'{kerb}@mit.edu',
+        await emailer.send_email(
+            email_address=email,
             subject=subject,
             app_name='SIPB Matrix',
             # TODO: write the email contents

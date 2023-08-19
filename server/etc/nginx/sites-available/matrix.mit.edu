@@ -27,7 +27,7 @@ server {
 	location @static {
 		root /var/www/matrix.mit.edu/;
 		try_files $uri $uri/ index.html =404;
-    }
+	}
 
     listen [::]:443 ssl; # managed by Certbot
     listen 443 ssl; # managed by Certbot
@@ -38,11 +38,36 @@ server {
 
 	# Easier MXC URLs
 	location /media/ {
+		# https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Disposition
+		# These links are for linking to people (e.g. Zephyr users), so they should display
+		# media instead of downloading it
+
+		# source: https://serverfault.com/questions/1018050/modify-response-header-with-nginx
+		# but see the nginx directive for /_matrix/media, since adding it here didn't work
+		
+		# TODO: keep filename for non-image files, i.e. Content-Disposition: inline; filename="cool.html"
 		rewrite ^/media/(.*)$ /_matrix/media/v3/download/matrix.mit.edu/$1 last;
 	}
 
+    location /_matrix/maubot/v1/logs {
+        proxy_pass http://localhost:29316;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header X-Forwarded-For $remote_addr;
+    }
+
+    location /_matrix/maubot {
+        proxy_pass http://localhost:29316;
+        proxy_set_header X-Forwarded-For $remote_addr;
+    }
+
+
 	# Do reverse proxy media
 	location ~ ^(/_matrix/media) {
+		proxy_hide_header Content-Disposition;
+                add_header Content-Disposition inline always;
+
 		# note: do not add a path (even a single /) after the port in `proxy_pass`,
 		# otherwise nginx will canonicalise the URI and cause signature verification
 		# errors.
@@ -78,6 +103,12 @@ server {
 	location /bridges/facebook {
 			proxy_pass http://127.0.0.1:29319;
 		}
+	
+	# https://github.com/matrix-org/rageshake
+	# TODO: probably rename from api to bugreport or something
+	location /api {
+		proxy_pass http://127.0.0.1:9110;
+	}
 		
 }
 server {

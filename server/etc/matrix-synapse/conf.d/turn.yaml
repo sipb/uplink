@@ -1,0 +1,3 @@
+turn_uris: [ "turn:matrix.mit.edu?transport=udp", "turn:matrix.mit.edu?transport=tcp" ]
+turn_user_lifetime: 86400000
+turn_allow_guests: true

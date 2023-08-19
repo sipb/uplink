@@ -2,23 +2,24 @@
 <html>
 
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 
 <body>
 </body>
 <script>
-    // This ensures links shared from our Element web work on mobile
-    // (combined with the nginx configuration changes)
-    let hash = window.location.hash;
-    if (!hash || hash === "#/welcome") {
-        window.location.replace("/mobile_guide/");
-    } else {
-        if (hash.includes("#/room/")) {
-            hash = hash.replace("#/room/", "#/");
-        }
-        window.location.replace("https://matrix.to/" + hash);
-    }
+	let hash = window.location.hash;
+	if (!hash || hash === "#/welcome") {
+		window.location.replace("/mobile_guide/");
+	} else {
+		if (hash.includes("#/room/")) {
+			hash = hash.replace("#/room/", "#/");
+		}
+		if (hash.includes("#/user/")) {
+			hash = hash.replace("#/user/", "#/");
+		}
+		window.location.replace("https://matrix.to/" + hash);
+	}
 </script>
 
 </html>

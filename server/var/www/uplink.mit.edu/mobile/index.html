@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="preconnect" href="https://fonts.gstatic.com">
+	<link href="https://fonts.googleapis.com/css2?family=Noto+Sans&amp;display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+	<div id="main">
+		<p>Hello, world!</p>
+	</div>
+</body>
+<script>
+	let hash = window.location.hash;
+	if (!hash || hash === "#/welcome") {
+		// TODO: redirect to guides, not this harsh alert + app store thing
+		// Or just show the guide and both (or all 3) stores
+		if (navigator.userAgent.includes("iPhone")) {
+			alert("To use SIPB Matrix, download Element from the App Store and use matrix.mit.edu as your homeserver instead of matrix.org!")
+			window.location.replace("https://apps.apple.com/us/app/element-messenger/id1083446067");
+		}
+		if (navigator.userAgent.includes("Android")) {
+			alert("To use SIPB Matrix, download Element from the Play Store and use matrix.mit.edu as your homeserver instead of matrix.org!");
+			window.location.replace("https://play.google.com/store/apps/details?id=im.vector.app");
+		}
+	} else {
+		if (hash.includes("#/room/")) {
+			hash = hash.replace("#/room/", "#/");
+		}
+		window.location.replace("https://matrix.to/" + hash);
+	}
+</script>
+
+</html>

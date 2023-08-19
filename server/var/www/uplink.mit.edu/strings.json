@@ -1,0 +1,8 @@
+{
+	"Integrations not allowed": {
+		"en": "Integrations are a work in progress."
+	},
+	"Your %(brand)s doesn't allow you to use an integration manager to do this. Please contact an admin.": {
+		"en": "If you wish to invite bots or add widgets, you can add them manually. Ask in #help:matrix.mit.edu or email matrix@mit.edu letting us know what bot or widget you need and we can guide you."
+	}
+}

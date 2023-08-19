@@ -1,3 +1,5 @@
+admin_contact: 'mailto:matrix@mit.edu'
+
 # Tells Synapse what domain it's running under
 # (otherwise it will redirect to the wrong place)
 public_baseurl: "https://matrix-synapse.mit.edu"
@@ -17,7 +19,35 @@ server_notices:
 templates:
   custom_template_directory: /etc/matrix-synapse/templates
 
-# Not using yet, and not sure how to import it yet
-# modules:
-  # - module: uplink.UplinkSynapseService
-    # config: {}
+modules:
+  - module: uplink_synapse_module.UplinkFirstLoginModule
+    config:
+      skip_prefixes:
+        - "@mattermost_"
+        - "@_zephyr_"
+        - "@whatsapp_"
+        - "@facebook_"
+      plain_text: |
+        Hello, and welcome to MIT Matrix!
+        For best results, we recommend 📌 pinning this tab (Right click -> Pin) on your browser, and making sure you accept receiving 🔔 notifications.
+        We also recommend installing the element icon Element app on your 📲 mobile device, available in the App Store, Play Store, and F-Droid. If you are feeling adventurous, you can try other clients as well.
+        Don't hesitate to DM @help:matrix.mit.edu or email us at matrix@mit.edu if you have any questions, concerns, or requests. You can also fill out this anonymous Google Form https://docs.google.com/forms/d/e/1FAIpQLSfIbAmtZeqLWCRx3L8_Hj28Nwh6TtsCjxN7OZjl8UisDkHgHw/viewform 
+        We hope you enjoy communicating on Matrix 🎉
+      html: "<h2>Welcome</h2>\n<p>Hello, and welcome to MIT Matrix!</p>\n<p>For best results, we recommend 📌 <strong>pinning</strong> this tab (<em>Right click -&gt; Pin</em>) on your browser, and making sure you accept receiving 🔔 <strong>notifications</strong>.</p>\n<p>We also recommend installing the <img src=\"mxc://matrix.mit.edu/QJGdSyYMSrCJjSKylDEqjfIz\" alt=\"element icon\"> Element app on your 📲 <strong>mobile device</strong>, available in the <a href=\"https://apps.apple.com/us/app/element-messenger/id1083446067\">App Store</a>, <a href=\"https://play.google.com/store/apps/details?id=im.vector.app\">Play Store</a>, and <a href=\"https://f-droid.org/en/packages/im.vector.app/\">F-Droid</a>. If you are feeling adventurous, you can try <a href=\"https://matrix.org/ecosystem/clients/\">other clients</a> as well.</p>\n<p>Don't hesitate to DM <a href=\"https://matrix.to/#/@help:matrix.mit.edu\">@help:matrix.mit.edu</a> or email us at matrix@mit.edu if you have any questions, concerns, or requests. You can also fill out our anonymous feedback Google Form at <a href=\"https://docs.google.com/forms/d/e/1FAIpQLSfIbAmtZeqLWCRx3L8_Hj28Nwh6TtsCjxN7OZjl8UisDkHgHw/viewform\">https://forms.gle/tFjZHhVH3vR9RhgT9</a>.</p>\n<p>We hope you enjoy communicating on Matrix 🎉.</p>\n"
+  - module: uplink_synapse_module.PeopleApiSynapseService
+    config:
+      allow_remote_results: false # for now... i don't hate federation but i need it more user-friendly
+      people_api:
+        # It is NOT ready yet...
+        enable: false
+        client_id: redacted
+        client_secret: redacted
+      blocked_prefixes:
+      # at least while the bridges don't support DMs
+        - mattermost_
+        - _zephyr_
+        - facebook_
+        - whatsapp_
+      blacklisted_homeservers:
+        - uplink.mit.edu
+

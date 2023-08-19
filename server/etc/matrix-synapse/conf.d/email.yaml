@@ -13,9 +13,11 @@ email:
   #require_transport_security: true
   enable_tls: false # :(
   #force_tls: true
-  app_name: Uplink
-  # TODO: change client_base_url
+  app_name: SIPB Matrix
+  client_base_url: "https://matrix.mit.edu"
+  invite_client_location: "https://matrix.mit.edu"
 
   # I think it's like Discord--it emails you messages you have not seen
   enable_notifs: true
+  notif_for_new_users: true
 

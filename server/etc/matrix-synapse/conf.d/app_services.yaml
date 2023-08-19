@@ -2,3 +2,5 @@ app_service_config_files:
   - /etc/matrix-synapse/appservices/facebook.yaml
   - /etc/matrix-synapse/appservices/whatsapp.yaml
   - /etc/matrix-synapse/appservices/zephyr.yaml
+  - /etc/matrix-synapse/appservices/mattermost.yaml
+

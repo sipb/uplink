@@ -36,7 +36,7 @@ MATRIX_SPIEL_BASE = "Matrix is a free and open source messaging platform. You ca
 MATRIX_SPIEL_PLAIN = MATRIX_SPIEL_BASE.format(link='https://matrix.mit.edu', element='Element')
 MATRIX_SPIEL_HTML = MATRIX_SPIEL_BASE.format(
     link='<a href="https://matrix.mit.edu" target="_blank" rel="noopener">matrix.mit.edu</a>',
-    element='<a href="https://matrix.mit.edu/mobile_guide/" target="_blank" rel="noopener"><img src="https://matrix.mit.edu/media/QJGdSyYMSrCJjSKylDEqjfIz" alt="element icon"> </a>',
+    element='<a href="https://matrix.mit.edu/mobile_guide/" target="_blank" rel="noopener"><img src="https://matrix.mit.edu/media/QJGdSyYMSrCJjSKylDEqjfIz" alt="element icon">Element</a>',
 )
 
 ROOM_SPIEL = "A room is similar to a group chat or channel on other platforms."
@@ -70,17 +70,17 @@ def make_email_body_html(inviter: str, is_dm: bool, is_space: bool, room_name: s
     what_to_join = room_name or "Matrix"
     # TODO: are the button contents good?
     body = f"Hi,<br/><br/>{make_main_sentence(inviter, is_dm, is_space, room_name)}" \
-        f"<br/><br/>{make_button(room_link, f'Join {what_to_join} now!')}"
+        f"<br/><br/>{make_button(room_link, f'Join {what_to_join} now!', '#007a61')}"
     if not is_dm:
-        body += f"<br/><br/>{SPACE_SPIEL if is_space else ROOM_SPIEL}"
+        body += f"<br/>{SPACE_SPIEL if is_space else ROOM_SPIEL}"
     body += f"<br/><br/>{MATRIX_SPIEL_HTML}<br/><br/>Best,<br/>The SIPB Matrix maintainers" \
-        '<br/><img src="https://matrix.mit.edu/pigeon.png">'
+        '<br/><img src="https://matrix.mit.edu/pigeon.png" width="134" height="169">'
     return body
 
 def make_button(href, content, color='#1F7F4C'):
     # https://www.litmus.com/blog/a-guide-to-bulletproof-buttons-in-email-design/
     # There are several to try
-    return f'<table border="0" cellspacing="0" cellpadding="0"><tr><td style="padding: 12px 18px 12px 18px; border-radius:5px; background-color:{color};" align="center"><a rel="noopener" target="_blank" href="{href}" target="_blank" style="font-size: 18px; font-family: Helvetica, Arial, sans-serif; font-weight: bold; color: #ffffff; text-decoration: none; display: inline-block;">{content}</a></td></tr></table>'
+    return f'<table border="0" cellspacing="0" cellpadding="0"><tr><td style="padding: 12px 18px 12px 18px; border-radius:5px; background-color:{color};" align="center"><a rel="noopener" target="_blank" href="{href}" target="_blank" style="font-size: 16px; font-weight: bold; color: #ffffff; text-decoration: none; display: inline-block;">{content}</a></td></tr></table>'
 
 def event_is_invite(event: EventBase) -> bool:
     return event.type == 'm.room.member' and event.content.get('membership') == 'invite'

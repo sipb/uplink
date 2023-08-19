@@ -29,21 +29,15 @@ ROOM_BASE_URL = f"{BASE_URL}/#/room/"
 class Config:
     pass
 
-def kerb_exists(kerb):
-    return True # TODO: revert this behavior!
-    try:
-        # should we check pobox instead?
-        answers = dns.resolver.resolve(f'{kerb}.passwd.ns.athena.mit.edu', 'TXT')
-        return True
-    except dns.resolver.NXDOMAIN:
-        return False
-
 MATRIX_SPIEL_BASE = "Matrix is a free and open source messaging platform. You can chat on " \
     "your laptop by opening {link} on a web browser, or on your phone by downloading " \
-    "the Element app and changing your server to matrix.mit.edu by clicking the \"Edit\" " \
+    "the {element} app and changing your server to matrix.mit.edu by clicking the \"Edit\" " \
     "button next to matrix.org."
-MATRIX_SPIEL_PLAIN = MATRIX_SPIEL_BASE.format(link='matrix.mit.edu')
-MATRIX_SPIEL_HTML = MATRIX_SPIEL_BASE.format(link='<a href="https://matrix.mit.edu">matrix.mit.edu</a>')
+MATRIX_SPIEL_PLAIN = MATRIX_SPIEL_BASE.format(link='https://matrix.mit.edu', element='Element')
+MATRIX_SPIEL_HTML = MATRIX_SPIEL_BASE.format(
+    link='<a href="https://matrix.mit.edu" target="_blank" rel="noopener">matrix.mit.edu</a>',
+    element='<a href="https://matrix.mit.edu/mobile_guide/" target="_blank" rel="noopener"><img src="https://matrix.mit.edu/media/QJGdSyYMSrCJjSKylDEqjfIz" alt="element icon"> </a>',
+)
 
 ROOM_SPIEL = "A room is similar to a group chat or channel on other platforms."
 SPACE_SPIEL = "A space is similar to a workspace or server on other platforms."
@@ -62,25 +56,31 @@ def make_main_sentence(inviter: str, is_dm: bool, is_space: bool, room_name: str
         destination = f"the \"{room_name}\" {room_type}" if room_name is not None else f"a {room_type}"
         return f"{inviter} has invited you to {destination} on Matrix."
 
-# TODO(important): we need a direct link to the room (room alias if available otherwise ID)
-
 # TODO: make the button nice-looking
 # example: https://www.litmus.com/blog/a-guide-to-bulletproof-buttons-in-email-design
 
-def make_email_body_plain(inviter: str, is_dm: bool, is_space: bool, room_name: str | None) -> str:
+def make_email_body_plain(inviter: str, is_dm: bool, is_space: bool, room_name: str | None, room_link: str) -> str:
     body = f"Hi,\n\n{make_main_sentence(inviter, is_dm, is_space, room_name)}"
     if not is_dm:
         body += f"\n\n{SPACE_SPIEL if is_space else ROOM_SPIEL}"
     body += f"\n\n{MATRIX_SPIEL_PLAIN}\n\nBest,\nThe SIPB Matrix maintainers"
     return body
 
-def make_email_body_html(inviter: str, is_dm: bool, is_space: bool, room_name: str | None) -> str:
-    body = f"Hi,<br/><br/>{make_main_sentence(inviter, is_dm, is_space, room_name)}"
+def make_email_body_html(inviter: str, is_dm: bool, is_space: bool, room_name: str | None, room_link: str) -> str:
+    what_to_join = room_name or "Matrix"
+    # TODO: are the button contents good?
+    body = f"Hi,<br/><br/>{make_main_sentence(inviter, is_dm, is_space, room_name)}" \
+        f"<br/><br/>{make_button(room_link, f'Join {what_to_join} now!')}"
     if not is_dm:
         body += f"<br/><br/>{SPACE_SPIEL if is_space else ROOM_SPIEL}"
-    # TODO: add carrier pigeon image
-    body += f"<br/><br/>{MATRIX_SPIEL_PLAIN}<br/><br/>Best,<br/>The SIPB Matrix maintainers"
+    body += f"<br/><br/>{MATRIX_SPIEL_HTML}<br/><br/>Best,<br/>The SIPB Matrix maintainers" \
+        '<br/><img src="https://matrix.mit.edu/pigeon.png">'
     return body
+
+def make_button(href, content, color='#1F7F4C'):
+    # https://www.litmus.com/blog/a-guide-to-bulletproof-buttons-in-email-design/
+    # There are several to try
+    return f'<table border="0" cellspacing="0" cellpadding="0"><tr><td style="padding: 12px 18px 12px 18px; border-radius:5px; background-color:{color};" align="center"><a rel="noopener" target="_blank" href="{href}" target="_blank" style="font-size: 18px; font-family: Helvetica, Arial, sans-serif; font-weight: bold; color: #ffffff; text-decoration: none; display: inline-block;">{content}</a></td></tr></table>'
 
 def event_is_invite(event: EventBase) -> bool:
     return event.type == 'm.room.member' and event.content.get('membership') == 'invite'
@@ -113,6 +113,25 @@ def get_room_name(state_events: StateMap[EventBase]) -> str | None:
     if not name_event or not name_event.content.get('name'):
         return None
     return name_event.content.get('name')
+
+def id_or_canonical_alias(event: EventBase, state_events: StateMap[EventBase]):
+    # TODO: do we want to explicitly specify the via=matrix.mit.edu? or is that not needed?
+    alias_event = state_events.get(('m.room.canonical_alias', ''))
+    if not alias_event or not alias_event.content.get('alias'):
+        return event.room_id
+    else:
+        return alias_event.content.get('alias')
+
+def make_room_permalink(room_id_or_alias):
+    return f'{ROOM_BASE_URL}{room_id_or_alias}'
+
+def kerb_exists(kerb):
+    return True # TODO: revert this behavior!
+    try:
+        answers = dns.resolver.resolve(f'{kerb}.pobox.ns.athena.mit.edu', 'TXT')
+        return True
+    except dns.resolver.NXDOMAIN:
+        return False
 
 class UplinkFutureUserEmailer:
     def __init__(self, config: Config, api: ModuleApi):

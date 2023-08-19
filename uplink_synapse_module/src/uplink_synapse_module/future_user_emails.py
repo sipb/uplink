@@ -37,7 +37,50 @@ def kerb_exists(kerb):
         return True
     except dns.resolver.NXDOMAIN:
         return False
-    
+
+MATRIX_SPIEL_PLAIN = "Matrix is a free and open source messaging platform. You can chat on " \
+    "your laptop by opening matrix.mit.edu on a web browser, or on your phone by downloading " \
+    "the Element app and changing your server to matrix.mit.edu by clicking the \"Edit\" " \
+    "button next to matrix.org."
+MATRIX_SPIEL_HTML = MATRIX_SPIEL_PLAIN.replace("matrix.mit.edu", '<a href="https://matrix.mit.edu">matrix.mit.edu</a>', count=1)
+
+ROOM_SPIEL = "A room is similar to a group chat or channel on other platforms."
+SPACE_SPIEL = "A space is similar to a workspace or server on other platforms."
+
+def make_email_subject(inviter_display_name: str, is_dm: bool, is_space: bool) -> str:
+    if is_dm:
+        return f"{inviter_display_name} has DMed you on Matrix"
+    else:
+        return f"You have been invited to a {'space' if is_space else 'room'} on Matrix"
+
+def make_main_sentence(inviter: str, is_dm: bool, is_space: bool, room_name: str | None) -> str:
+    if is_dm:
+        return f"{inviter} has sent you a direct message on Matrix."
+    else:
+        room_type = 'space' if is_space else 'room'
+        destination = f"the \"{room_name}\" {room_type}" if room_name is not None else f"a {room_type}"
+        return f"{inviter} has invited you to {destination} on Matrix."
+
+# TODO(important): we need a direct link to the room (room alias if available otherwise ID)
+
+# TODO: make the button nice-looking
+# example: https://www.litmus.com/blog/a-guide-to-bulletproof-buttons-in-email-design
+
+def make_email_body_plain(inviter: str, is_dm: bool, is_space: bool, room_name: str | None) -> str:
+    body = f"Hi,\n\n{make_main_sentence(inviter, is_dm, is_space, room_name)}"
+    if not is_dm:
+        body += f"\n\n{SPACE_SPIEL if is_space else ROOM_SPIEL}"
+    body += f"\n\n{MATRIX_SPIEL_PLAIN}\n\nBest,\nThe SIPB Matrix maintainers"
+    return body
+
+def make_email_body_html(inviter: str, is_dm: bool, is_space: bool, room_name: str | None) -> str:
+    body = f"Hi,<br/><br/>{make_main_sentence(inviter, is_dm, is_space, room_name)}"
+    if not is_dm:
+        body += f"<br/><br/>{SPACE_SPIEL if is_space else ROOM_SPIEL}"
+    # TODO: add carrier pigeon image
+    body += f"<br/><br/>{MATRIX_SPIEL_PLAIN}<br/><br/>Best,<br/>The SIPB Matrix maintainers"
+    return body
+
 def event_is_invite(event: EventBase) -> bool:
     return event.type == 'm.room.member' and event.content.get('membership') == 'invite'
 
@@ -64,6 +107,12 @@ def get_displayname(state_events: StateMap[EventBase], user: str):
         return get_username(user)
     return member_event.content.get('displayname') or get_username(user)
 
+def get_room_name(state_events: StateMap[EventBase]) -> str | None:
+    name_event = state_events.get(('m.room.name', ''))
+    if not name_event or not name_event.content.get('name'):
+        return None
+    return name_event.content.get('name')
+
 class UplinkFutureUserEmailer:
     def __init__(self, config: Config, api: ModuleApi):
         self.api = api
@@ -87,7 +136,6 @@ class UplinkFutureUserEmailer:
 
         if not event_is_invite(event):
             # We only care about invites
-            print('not an invite!')
             return
 
         pprint(event)
@@ -113,6 +161,7 @@ class UplinkFutureUserEmailer:
 
         is_dm = is_invitation_dm(event)
         is_space = room_is_space(state_events)
+        room_name = get_room_name(state_events)
         kerb = get_username(user)
 
         if not kerb_exists(kerb):
@@ -120,27 +169,16 @@ class UplinkFutureUserEmailer:
             return
         
         emailer = self.api._hs.get_send_email_handler()
-        
-        # TODO: remove the eom
-        if is_dm:
-            # TODO: do we want display name or kerb?
-            subject = f"{get_displayname(event.sender)} has DMed you on Matrix eom"
-        else:
-            subject = f"You have invited to a {'space' if is_space else 'room'} on Matrix eom"
 
+        inviter = get_displayname(event.sender)
 
         email = f'{kerb}@mit.edu'
         print(f'sending email to {email}')
-        # TODO: show valuable info - room name if it is a room and so on
-        # member count perhaps
-        # TODO: and don't forget links and instructions, incl. mobile!
         await emailer.send_email(
             email_address=email,
-            subject=subject,
+            subject=make_email_subject(inviter, is_dm, is_space),
             app_name='SIPB Matrix',
-            # TODO: write the email contents
-            # also make it sort of nice - add a pigeon idk
-            html='',
-            text='',
+            html=make_email_body_html(inviter, is_dm, is_space, room_name),
+            text=make_email_body_plain(inviter, is_dm, is_space, room_name),
         )
         

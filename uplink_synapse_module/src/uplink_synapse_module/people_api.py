@@ -48,7 +48,7 @@ class PeopleApiDirectoryResource(AsyncResource):
         """
         check that a MXID is not blocked (i.e. not a ghost, and not in a blacklisted homeserver)
         """
-        localpart, homeserver = mxid[1:].split(':', maxsplit=2)
+        localpart, homeserver = mxid[1:].split(':', maxsplit=1)
 
         return \
             not any(localpart.startswith(prefix) for prefix in self.blocked_prefixes) \

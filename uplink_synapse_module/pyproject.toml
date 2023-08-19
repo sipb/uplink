@@ -12,5 +12,6 @@ maintainers = [
 ]
 
 dependencies = [
-    "dataclasses-json"
+    "dataclasses-json",
+    "dnspython"
 ]

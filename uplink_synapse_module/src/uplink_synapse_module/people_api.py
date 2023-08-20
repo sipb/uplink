@@ -17,6 +17,7 @@ from .util import AsyncResource, _wrap_for_html_exceptions, _return_json, kerb_e
 
 # TODO: probably override if we wish to debug the header behavior
 PEOPLE_API_ENDPOINT = 'https://mit-people-v3.cloudhub.io/people/v3/people'
+full_display_name = lambda name: f'{name} 📩'
 
 
 class PeopleApiDirectoryResource(AsyncResource):
@@ -144,7 +145,7 @@ class PeopleApiDirectoryResource(AsyncResource):
         # remove duplicates - only people who have not signed up
         # TODO: sort by relevance somehow or limit the amount of people api results to like 3
         people_results = [
-            {'avatar_url': None, 'display_name': f'{name} - not signed up', 'user_id': self.api.get_qualified_user_id(kerb)}
+            {'avatar_url': None, 'display_name': full_display_name(name), 'user_id': self.api.get_qualified_user_id(kerb)}
             for kerb, name in people_response
             if self.api.get_qualified_user_id(kerb) not in local_users_set
             # don't incorrectly count ourselves as not signed up
@@ -251,7 +252,7 @@ class PeopleApiProfileResource(AsyncResource):
             ret = {}
             displayname = await self.get_name_by_kerb(kerb)
             if displayname is not None:
-                ret['displayname'] = displayname
+                ret['displayname'] = full_display_name(displayname)
             _return_json(ret, request)
             return
         

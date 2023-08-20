@@ -56,9 +56,6 @@ def make_main_sentence(inviter: str, is_dm: bool, is_space: bool, room_name: str
         destination = f"the \"{room_name}\" {room_type}" if room_name is not None else f"a {room_type}"
         return f"{inviter} has invited you to {destination} on Matrix."
 
-# TODO: make the button nice-looking
-# example: https://www.litmus.com/blog/a-guide-to-bulletproof-buttons-in-email-design
-
 def make_email_body_plain(inviter: str, is_dm: bool, is_space: bool, room_name: str | None, room_link: str) -> str:
     body = f"Hi,\n\n{make_main_sentence(inviter, is_dm, is_space, room_name)}"
     if not is_dm:
@@ -152,14 +149,12 @@ class UplinkFutureUserEmailer:
         """
         Process room invites and send emails accordingly
         """
-        # TODO: remove all of the logging
 
         if not event_is_invite(event):
             # We only care about invites
             return
 
-        pprint(event)
-        pprint(state_events)
+        print("Found an invite!")
 
         user = get_invited_user(event)
 
@@ -187,13 +182,11 @@ class UplinkFutureUserEmailer:
         if not kerb_exists(kerb):
             print('Inexistent kerb!')
             return
-        
 
         inviter = get_displayname(state_events, event.sender)
         room_link = make_room_permalink(id_or_canonical_alias(event, state_events))
 
         email = f'{kerb}@mit.edu'
-        print(f'sending email to {email}')
         emailer = self.api._hs.get_send_email_handler()
         await emailer.send_email(
             email_address=email,

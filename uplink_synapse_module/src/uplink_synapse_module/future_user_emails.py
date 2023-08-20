@@ -15,7 +15,7 @@ from synapse.events import EventBase
 from synapse.types import StateMap
 from synapse.module_api.errors import ConfigError
 from pprint import pprint
-from util import kerb_exists, get_username
+from .util import kerb_exists, get_username
 
 BASE_URL = "https://matrix.mit.edu"
 ROOM_BASE_URL = f"{BASE_URL}/#/room/"

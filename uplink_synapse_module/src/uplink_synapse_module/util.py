@@ -1,4 +1,4 @@
-import dns
+import dns.resolver
 import html
 import json
 import logging

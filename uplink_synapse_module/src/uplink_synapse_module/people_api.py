@@ -19,6 +19,15 @@ from .util import AsyncResource, _wrap_for_html_exceptions, _return_json, kerb_e
 PEOPLE_API_ENDPOINT = 'https://mit-people-v3.cloudhub.io/people/v3/people'
 full_display_name = lambda name: f'{name} 📩'
 
+# mock data so I can actually test these workflows
+MOCK_DATA = {
+    'rodriguez': 'Gabriel Rodríguez',
+    'sipb0': 'Test Account 0',
+    'sipb1': 'Test Account 1',
+    'sipb2': 'Test Account 2',
+    'sipb3': 'Test Account 3',
+    'test-mailing-list': 'Test Mailing List',
+}
 
 class PeopleApiDirectoryResource(AsyncResource):
     client_id: str
@@ -63,7 +72,10 @@ class PeopleApiDirectoryResource(AsyncResource):
         Make a query to the people API by name or whatever it accepts
         Return a list of tuples of (kerb, display name)
         """
-        
+        # TODO: remove this
+        # Hardcode a fixed directory for now
+        return [(k,v) for k,v in MOCK_DATA.items()]
+
         if not self.should_search_people_api(search_query):
             return []
 
@@ -193,6 +205,10 @@ class PeopleApiProfileResource(AsyncResource):
         Make a query to the people API by name or whatever it accepts
         Return a list of tuples of (kerb, display name)
         """
+        # TODO: remove the hardcoded dummy data part
+        if kerb in MOCK_DATA:
+            return MOCK_DATA[kerb]
+
         try:
             response = await self.api.http_client.get_json(
                 f'{PEOPLE_API_ENDPOINT}/{kerb}',

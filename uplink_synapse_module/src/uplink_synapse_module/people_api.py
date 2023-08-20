@@ -203,7 +203,7 @@ class PeopleApiProfileResource(AsyncResource):
             return None
 
     @_wrap_for_html_exceptions
-    async def async_render_POST(self, request: Request):
+    async def async_render_GET(self, request: Request):
         # get user from GET parameters
         if 'user' not in request.args:
             request.setResponseCode(HTTPStatus.BAD_REQUEST)

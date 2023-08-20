@@ -8,6 +8,14 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+def kerb_exists(kerb):
+    return True # TODO: revert this behavior!
+    try:
+        answers = dns.resolver.resolve(f'{kerb}.pobox.ns.athena.mit.edu', 'TXT')
+        return True
+    except dns.resolver.NXDOMAIN:
+        return False
+
 # general purpose functions stolen from
 # https://github.com/matrix-org/matrix-synapse-saml-mozilla/blob/main/matrix_synapse_saml_mozilla/username_picker.py
 

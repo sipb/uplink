@@ -15,7 +15,7 @@ from synapse.events import EventBase
 from synapse.types import StateMap
 from synapse.module_api.errors import ConfigError
 from pprint import pprint
-import dns.resolver
+from util import kerb_exists
 
 BASE_URL = "https://matrix.mit.edu"
 ROOM_BASE_URL = f"{BASE_URL}/#/room/"
@@ -121,14 +121,6 @@ def id_or_canonical_alias(event: EventBase, state_events: StateMap[EventBase]):
 
 def make_room_permalink(room_id_or_alias):
     return f'{ROOM_BASE_URL}{room_id_or_alias}'
-
-def kerb_exists(kerb):
-    return True # TODO: revert this behavior!
-    try:
-        answers = dns.resolver.resolve(f'{kerb}.pobox.ns.athena.mit.edu', 'TXT')
-        return True
-    except dns.resolver.NXDOMAIN:
-        return False
 
 class UplinkFutureUserEmailer:
     def __init__(self, config: Config, api: ModuleApi):

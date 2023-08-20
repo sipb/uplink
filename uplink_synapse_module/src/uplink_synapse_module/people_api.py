@@ -7,6 +7,7 @@ from synapse.http.servlet import parse_json_object_from_request
 from synapse.types import UserID
 from synapse.api.errors import Codes
 from .util import AsyncResource, _wrap_for_html_exceptions, _return_json, kerb_exists, get_username
+from .util import MOCK_DATA
 
 # NOTE: It is possible that LDAP may be faster, e.g.:
 # ldapsearch -LLL -h win.mit.edu -b "OU=users,OU=Moira,DC=WIN,DC=MIT,DC=EDU" "displayName=ga*" displayName cn
@@ -18,16 +19,6 @@ from .util import AsyncResource, _wrap_for_html_exceptions, _return_json, kerb_e
 # TODO: probably override if we wish to debug the header behavior
 PEOPLE_API_ENDPOINT = 'https://mit-people-v3.cloudhub.io/people/v3/people'
 full_display_name = lambda name: f'{name} 📩'
-
-# mock data so I can actually test these workflows
-MOCK_DATA = {
-    'rodriguez': 'Gabriel Rodríguez',
-    'sipb0': 'Test Account 0',
-    'sipb1': 'Test Account 1',
-    'sipb2': 'Test Account 2',
-    'sipb3': 'Test Account 3',
-    'test-mailing-list': 'Test Mailing List',
-}
 
 class PeopleApiDirectoryResource(AsyncResource):
     client_id: str

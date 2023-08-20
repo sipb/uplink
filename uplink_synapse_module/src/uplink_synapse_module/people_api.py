@@ -161,6 +161,9 @@ class PeopleApiDirectoryResource(AsyncResource):
             for kerb, name in people_response
             if self.api.get_qualified_user_id(kerb) not in local_users_set
             # don't incorrectly count ourselves as not signed up
+            # TODO: note that if we want people to be able to DM
+            # #themselves then we may need to deliberately add this functionality carefully
+            # (and might be best changed in Synapse itself)
             and self.api.get_qualified_user_id(kerb) != user_id
         ]
 

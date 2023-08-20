@@ -147,6 +147,8 @@ class PeopleApiDirectoryResource(AsyncResource):
             {'avatar_url': None, 'display_name': f'{name} - not signed up', 'user_id': self.api.get_qualified_user_id(kerb)}
             for kerb, name in people_response
             if self.api.get_qualified_user_id(kerb) not in local_users_set
+            # don't incorrectly count ourselves as not signed up
+            and self.api.get_qualified_user_id(kerb) != user_id
         ]
 
         # Overall, we want the concatenation of

@@ -221,8 +221,6 @@ class PeopleApiProfileResource(AsyncResource):
             }, request)
             return
         user_id = user_arg[0].decode()
-        # probably not necessary, but Synapse has this
-        user = UserID.from_string(user_id)
         
         # based on profile.py in Synapse
         requester = await self.api.get_user_by_req(request)
@@ -235,6 +233,8 @@ class PeopleApiProfileResource(AsyncResource):
                 'error': 'Invalid user id',
             }, request)
             return
+        # probably not necessary, but Synapse has this
+        user = UserID.from_string(user_id)
         
         # our custom code to handle when the user does not exist
         if self.api.is_mine(user_id) and await self.api.check_user_exists(user_id) is None:

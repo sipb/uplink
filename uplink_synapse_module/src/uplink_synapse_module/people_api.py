@@ -1,9 +1,12 @@
+from http import HTTPStatus
 from twisted.web.server import Request
 from synapse.module_api import ModuleApi
 from synapse.module_api.errors import ConfigError
 from synapse.api.errors import HttpResponseException
 from synapse.http.servlet import parse_json_object_from_request
-from .util import AsyncResource, _wrap_for_html_exceptions, _return_json
+from synapse.types import UserID
+from synapse.api.errors import Codes
+from .util import AsyncResource, _wrap_for_html_exceptions, _return_json, kerb_exists, get_username
 
 # NOTE: It is possible that LDAP may be faster, e.g.:
 # ldapsearch -LLL -h win.mit.edu -b "OU=users,OU=Moira,DC=WIN,DC=MIT,DC=EDU" "displayName=ga*" displayName cn
@@ -163,6 +166,108 @@ class PeopleApiDirectoryResource(AsyncResource):
         }, request)
 
 
+"""
+I have no idea actually how to make an endpoint that has parameters
+in the URL itself, with this AsyncResource or Resource thing. The Synapse
+code base uses RestServlet which has PATTERNS but it seems like a completely
+different thing. Figuring this out would be too much of a side-quest, so
+the way I will work around this is by replacing the path parameter to a query
+parameter from nginx itself
+"""
+
+class PeopleApiProfileResource(AsyncResource):
+    client_id: str
+    client_secret: str
+
+    def __init__(self, api: ModuleApi, client_id, client_secret):
+        super().__init__()
+        self.api = api
+        self.client_id = client_id
+        self.client_secret = client_secret
+
+    async def get_name_by_kerb(self, kerb):
+        """
+        Make a query to the people API by name or whatever it accepts
+        Return a list of tuples of (kerb, display name)
+        """
+        try:
+            response = await self.api.http_client.get_json(
+                f'{PEOPLE_API_ENDPOINT}/{kerb}',
+                headers={
+                    'client_id': [self.client_id],
+                    'client_secret': [self.client_secret],
+                }
+            )
+            return response['item']['displayName']
+        except Exception as e:
+            return None
+
+    @_wrap_for_html_exceptions
+    async def async_render_POST(self, request: Request):
+        # get user from GET parameters
+        if 'user' not in request.args:
+            request.setResponseCode(HTTPStatus.BAD_REQUEST)
+            _return_json({
+                'errcode': Codes.MISSING_PARAM,
+                'error': 'who do you want to look up?'
+            }, request)
+            return
+        user_arg = request.args.get('user')
+        if len(user_arg) != 1:
+            request.setResponseCode(HTTPStatus.BAD_REQUEST)
+            _return_json({
+                'errcode': Codes.INVALID_PARAM,
+                'error': 'why did you give me an array?'
+            }, request)
+            return
+        user_id = user_arg[0]
+        # probably not necessary, but Synapse has this
+        user = UserID.from_string(user_id)
+        
+        # based on profile.py in Synapse
+        requester = await self.api.get_user_by_req(request)
+        requester_user = requester.user
+
+        if not UserID.is_valid(user_id):
+            request.setResponseCode(HTTPStatus.BAD_REQUEST)
+            _return_json({
+                'errcode': Codes.INVALID_PARAM,
+                'error': 'Invalid user id',
+            }, request)
+            return
+        
+        # our custom code to handle when the user does not exist
+        if self.api.is_mine(user_id) and await self.api.check_user_exists(user_id) is None:
+            kerb = get_username(user_id)
+            if not kerb_exists():
+                request.setResponseCode(HTTPStatus.NOT_FOUND)
+                _return_json({
+                    'errcode': Codes.NOT_FOUND,
+                    'error': 'kerb does not exist'
+                }, request)
+                return
+            ret = {}
+            displayname = await self.get_name_by_kerb(kerb)
+            if displayname is not None:
+                ret['displayname'] = displayname
+            _return_json(ret, request)
+            return
+        
+        # same as Synapse code
+        profile_handler = self.api._hs.get_profile_handler()
+        # we don't need this check since we don't restrict profile lookups by membership
+        # await profile_handler.check_profile_query_allowed(user, requester_user)
+        displayname = await profile_handler.get_displayname(user)
+        avatar_url = await profile_handler.get_avatar_url(user)
+
+        ret = {}
+        if displayname is not None:
+            ret['displayname'] = displayname
+        if avatar_url is not None:
+            ret['avatar_url'] = avatar_url
+        _return_json(ret, request)
+
+        
 class PeopleApiSynapseService:
     @staticmethod
     def parse_config(config: dict) -> dict: 
@@ -180,8 +285,6 @@ class PeopleApiSynapseService:
 
     def __init__(self, config: dict, api: ModuleApi):
         self.api = api
-        # TODO: we want another resource (query specific user ID)
-        # so put_child and stuff (refer to mozilla saml repo)
         self.api.register_web_resource(
             path='/_synapse/client/people_api/search',
             resource=PeopleApiDirectoryResource(
@@ -193,5 +296,13 @@ class PeopleApiSynapseService:
                 blacklisted_homeservers=config.get('blacklisted_homeservers', []),
                 allow_remote_results=config.get('allow_remote_results'),
             ),
+        )
+        self.api.register_web_resource(
+            path='/_synapse/client/people_api/profile',
+            resource=PeopleApiProfileResource(
+                api=api,
+                client_id=config['people_api']['client_id'],
+                client_secret=config['people_api']['client_secret'],
+            )
         )
 

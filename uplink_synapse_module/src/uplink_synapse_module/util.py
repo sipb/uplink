@@ -15,6 +15,10 @@ def kerb_exists(kerb):
         return True
     except dns.resolver.NXDOMAIN:
         return False
+    
+def get_username(mxid: str) -> str:
+    localpart, homeserver = mxid[1:].split(':', maxsplit=1)
+    return localpart
 
 # general purpose functions stolen from
 # https://github.com/matrix-org/matrix-synapse-saml-mozilla/blob/main/matrix_synapse_saml_mozilla/username_picker.py

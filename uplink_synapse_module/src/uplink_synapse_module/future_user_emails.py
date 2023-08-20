@@ -15,7 +15,7 @@ from synapse.events import EventBase
 from synapse.types import StateMap
 from synapse.module_api.errors import ConfigError
 from pprint import pprint
-from util import kerb_exists
+from util import kerb_exists, get_username
 
 BASE_URL = "https://matrix.mit.edu"
 ROOM_BASE_URL = f"{BASE_URL}/#/room/"
@@ -87,10 +87,6 @@ def get_invited_user(event: EventBase) -> str:
 
 def is_invitation_dm(event: EventBase) -> bool:
     return bool(event.content.get('is_direct'))
-
-def get_username(mxid: str) -> str:
-    localpart, homeserver = mxid[1:].split(':', maxsplit=1)
-    return localpart
 
 def room_is_space(state_events: StateMap[EventBase]):
     creation_event = state_events.get(('m.room.create', ''))

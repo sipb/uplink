@@ -239,7 +239,7 @@ class PeopleApiProfileResource(AsyncResource):
         # our custom code to handle when the user does not exist
         if self.api.is_mine(user_id) and await self.api.check_user_exists(user_id) is None:
             kerb = get_username(user_id)
-            if not kerb_exists():
+            if not kerb_exists(kerb):
                 request.setResponseCode(HTTPStatus.NOT_FOUND)
                 _return_json({
                     'errcode': Codes.NOT_FOUND,

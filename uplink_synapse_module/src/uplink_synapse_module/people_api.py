@@ -205,14 +205,14 @@ class PeopleApiProfileResource(AsyncResource):
     @_wrap_for_html_exceptions
     async def async_render_GET(self, request: Request):
         # get user from GET parameters
-        if 'user' not in request.args:
+        if b'user' not in request.args:
             request.setResponseCode(HTTPStatus.BAD_REQUEST)
             _return_json({
                 'errcode': Codes.MISSING_PARAM,
                 'error': 'who do you want to look up?'
             }, request)
             return
-        user_arg = request.args.get('user')
+        user_arg = request.args.get(b'user')
         if len(user_arg) != 1:
             request.setResponseCode(HTTPStatus.BAD_REQUEST)
             _return_json({
@@ -220,7 +220,7 @@ class PeopleApiProfileResource(AsyncResource):
                 'error': 'why did you give me an array?'
             }, request)
             return
-        user_id = user_arg[0]
+        user_id = user_arg[0].decode()
         # probably not necessary, but Synapse has this
         user = UserID.from_string(user_id)
         

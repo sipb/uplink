@@ -2,7 +2,7 @@ from http import HTTPStatus
 from twisted.web.server import Request
 from synapse.module_api import ModuleApi
 from synapse.module_api.errors import ConfigError
-from synapse.api.errors import HttpResponseException
+from synapse.api.errors import HttpResponseException, SynapseError
 from synapse.http.servlet import parse_json_object_from_request
 from synapse.types import UserID
 from synapse.api.errors import Codes
@@ -217,68 +217,55 @@ class PeopleApiProfileResource(AsyncResource):
 
     @_wrap_for_html_exceptions
     async def async_render_GET(self, request: Request):
-        # get user from GET parameters
-        if b'user' not in request.args:
-            request.setResponseCode(HTTPStatus.BAD_REQUEST)
-            _return_json({
-                'errcode': Codes.MISSING_PARAM,
-                'error': 'who do you want to look up?'
-            }, request)
-            return
-        user_arg = request.args.get(b'user')
-        if len(user_arg) != 1:
-            request.setResponseCode(HTTPStatus.BAD_REQUEST)
-            _return_json({
-                'errcode': Codes.INVALID_PARAM,
-                'error': 'why did you give me an array?'
-            }, request)
-            return
-        user_id = user_arg[0].decode()
-        
-        # based on profile.py in Synapse
-        requester = await self.api.get_user_by_req(request)
-        requester_user = requester.user
+        try:
+            # get user from GET parameters
+            if b'user' not in request.args:
+                raise SynapseError(HTTPStatus.BAD_REQUEST, 'who do you want to look up?', Codes.MISSING_PARAM)
+            user_arg = request.args.get(b'user')
+            if len(user_arg) != 1:
+                raise SynapseError(HTTPStatus.BAD_REQUEST, 'why did you give me an array?', Codes.INVALID_PARAM)
+            user_id = user_arg[0].decode()
+            
+            # based on profile.py in Synapse
+            requester = await self.api.get_user_by_req(request)
+            requester_user = requester.user
 
-        if not UserID.is_valid(user_id):
-            request.setResponseCode(HTTPStatus.BAD_REQUEST)
-            _return_json({
-                'errcode': Codes.INVALID_PARAM,
-                'error': 'Invalid user id',
-            }, request)
-            return
-        # probably not necessary, but Synapse has this
-        user = UserID.from_string(user_id)
-        
-        # our custom code to handle when the user does not exist
-        if self.api.is_mine(user_id) and await self.api.check_user_exists(user_id) is None:
-            kerb = get_username(user_id)
-            if not kerb_exists(kerb):
-                request.setResponseCode(HTTPStatus.NOT_FOUND)
-                _return_json({
-                    'errcode': Codes.NOT_FOUND,
-                    'error': 'kerb does not exist'
-                }, request)
+            if not UserID.is_valid(user_id):
+                raise SynapseError(HTTPStatus.BAD_REQUEST, 'Invalid user id', Codes.INVALID_PARAM)
+            # probably not necessary, but Synapse has this
+            user = UserID.from_string(user_id)
+            
+            # our custom code to handle when the user does not exist
+            if self.api.is_mine(user_id) and await self.api.check_user_exists(user_id) is None:
+                kerb = get_username(user_id)
+                if not kerb_exists(kerb):
+                    raise SynapseError(404, 'kerb does not exist', Codes.NOT_FOUND)
+                ret = {}
+                displayname = await self.get_name_by_kerb(kerb)
+                if displayname is not None:
+                    ret['displayname'] = full_display_name(displayname)
+                _return_json(ret, request)
                 return
-            ret = {}
-            displayname = await self.get_name_by_kerb(kerb)
-            if displayname is not None:
-                ret['displayname'] = full_display_name(displayname)
-            _return_json(ret, request)
-            return
-        
-        # same as Synapse code
-        profile_handler = self.api._hs.get_profile_handler()
-        # we don't need this check since we don't restrict profile lookups by membership
-        # await profile_handler.check_profile_query_allowed(user, requester_user)
-        displayname = await profile_handler.get_displayname(user)
-        avatar_url = await profile_handler.get_avatar_url(user)
+            
+            # same as Synapse code
+            profile_handler = self.api._hs.get_profile_handler()
+            # we don't need this check since we don't restrict profile lookups by membership
+            # await profile_handler.check_profile_query_allowed(user, requester_user)
+            displayname = await profile_handler.get_displayname(user)
+            avatar_url = await profile_handler.get_avatar_url(user)
 
-        ret = {}
-        if displayname is not None:
-            ret['displayname'] = displayname
-        if avatar_url is not None:
-            ret['avatar_url'] = avatar_url
-        _return_json(ret, request)
+            ret = {}
+            if displayname is not None:
+                ret['displayname'] = displayname
+            if avatar_url is not None:
+                ret['avatar_url'] = avatar_url
+            _return_json(ret, request)
+        except SynapseError as e:
+            request.setResponseCode(e.code)
+            _return_json({
+                'errcode': e.errcode,
+                'error': e.msg
+            }, request)
 
         
 class PeopleApiSynapseService:

@@ -65,7 +65,6 @@ def make_email_body_plain(inviter: str, is_dm: bool, is_space: bool, room_name: 
 
 def make_email_body_html(inviter: str, is_dm: bool, is_space: bool, room_name: str | None, room_link: str) -> str:
     what_to_join = room_name or "Matrix"
-    # TODO: are the button contents good?
     body = f"Hi,<br/><br/>{make_main_sentence(inviter, is_dm, is_space, room_name)}" \
         f"<br/><br/>{make_button(room_link, f'Join {what_to_join} now!', '#007a61')}"
     if not is_dm:
@@ -108,7 +107,6 @@ def get_room_name(state_events: StateMap[EventBase]) -> str | None:
     return name_event.content.get('name')
 
 def id_or_canonical_alias(event: EventBase, state_events: StateMap[EventBase]):
-    # TODO: do we want to explicitly specify the via=matrix.mit.edu? or is that not needed?
     alias_event = state_events.get(('m.room.canonical_alias', ''))
     if not alias_event or not alias_event.content.get('alias'):
         return event.room_id

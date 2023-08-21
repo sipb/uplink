@@ -16,7 +16,6 @@ from .util import MOCK_DATA
 # * 0m1.003s for People API
 # * 0m0.718s for LDAP
 
-# TODO: probably override if we wish to debug the header behavior
 PEOPLE_API_ENDPOINT = 'https://mit-people-v3.cloudhub.io/people/v3/people'
 full_display_name = lambda name: f'{name} 📩'
 

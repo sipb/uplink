@@ -9,23 +9,11 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# mock data so I can actually test these workflows
-MOCK_DATA = {
-    'rodriguez': 'Gabriel Rodríguez',
-    'sipb0': 'Test Account 0',
-    'sipb1': 'Test Account 1',
-    'sipb2': 'Test Account 2',
-    'sipb3': 'Test Account 3',
-    'test-mailing-list': 'Test Mailing List',
-}
-
 def kerb_exists(kerb):
     try:
         answers = dns.resolver.resolve(f'{kerb}.pobox.ns.athena.mit.edu', 'TXT')
         return True
     except dns.resolver.NXDOMAIN:
-        # TODO: revert this
-        return kerb in MOCK_DATA
         return False
     
 def get_username(mxid: str) -> str:

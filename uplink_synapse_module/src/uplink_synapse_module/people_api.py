@@ -62,10 +62,6 @@ class PeopleApiDirectoryResource(AsyncResource):
         Make a query to the people API by name or whatever it accepts
         Return a list of tuples of (kerb, display name)
         """
-        # TODO: remove this
-        # Hardcode a fixed directory for now
-        return [(k,v) for k,v in MOCK_DATA.items()]
-
         if not self.should_search_people_api(search_query):
             return []
 
@@ -198,10 +194,6 @@ class PeopleApiProfileResource(AsyncResource):
         Make a query to the people API by name or whatever it accepts
         Return a list of tuples of (kerb, display name)
         """
-        # TODO: remove the hardcoded dummy data part
-        if kerb in MOCK_DATA:
-            return MOCK_DATA[kerb]
-
         try:
             response = await self.api.http_client.get_json(
                 f'{PEOPLE_API_ENDPOINT}/{kerb}',

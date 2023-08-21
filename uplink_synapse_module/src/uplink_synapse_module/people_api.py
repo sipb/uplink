@@ -221,6 +221,9 @@ class PeopleApiProfileResource(AsyncResource):
             user_id: str = user_arg[0].decode()
 
             # Get query type (tbh a hack but I'll take it)
+            if user_id[-1] == '/':
+                # remove any trailing slashes, if any
+                user_id = user_id[:-1]
             if user_id.endswith('/displayname'):
                 query_type = 'displayname'
                 user_id = user_id[:-len('/displayname')]

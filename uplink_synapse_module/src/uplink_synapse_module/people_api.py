@@ -273,7 +273,7 @@ class PeopleApiProfileResource(AsyncResource):
             elif query_type == 'avatar':
                 if 'avatar_url' not in ret:
                     raise  SynapseError(404, 'profile picture not found', Codes.NOT_FOUND)
-                _return_json({'avatar_url': ret['avatar_rul']}, request)
+                _return_json({'avatar_url': ret['avatar_url']}, request)
         except SynapseError as e:
             request.setResponseCode(e.code)
             _return_json({

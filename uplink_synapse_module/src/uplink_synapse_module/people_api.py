@@ -228,7 +228,7 @@ class PeopleApiProfileResource(AsyncResource):
                 query_type = 'displayname'
                 user_id = user_id[:-len('/displayname')]
             elif user_id.endswith('/avatar_url'):
-                query_type = 'avatar'
+                query_type = 'avatar_url'
                 user_id = user_id[:-len('/avatar_url')]
             else:
                 query_type = 'both'
@@ -257,7 +257,7 @@ class PeopleApiProfileResource(AsyncResource):
                 # await profile_handler.check_profile_query_allowed(user, requester_user)
 
                 # only do this query if needed
-                displayname = await profile_handler.get_displayname(user) if query_type != 'avatar' else None
+                displayname = await profile_handler.get_displayname(user) if query_type != 'avatar_url' else None
                 avatar_url = await profile_handler.get_avatar_url(user) if query_type != 'displayname' else None
 
                 if displayname is not None:
@@ -273,7 +273,7 @@ class PeopleApiProfileResource(AsyncResource):
                 if 'displayname' not in ret:
                     raise SynapseError(404, 'display name not found', Codes.NOT_FOUND)
                 _return_json({'displayname': ret['displayname']}, request)
-            elif query_type == 'avatar':
+            elif query_type == 'avatar_url':
                 if 'avatar_url' not in ret:
                     raise  SynapseError(404, 'profile picture not found', Codes.NOT_FOUND)
                 _return_json({'avatar_url': ret['avatar_url']}, request)

@@ -7,7 +7,6 @@ from synapse.http.servlet import parse_json_object_from_request
 from synapse.types import UserID
 from synapse.api.errors import Codes
 from .util import AsyncResource, _wrap_for_html_exceptions, _return_json, kerb_exists, get_username
-from .util import MOCK_DATA
 
 # NOTE: It is possible that LDAP may be faster, e.g.:
 # ldapsearch -LLL -h win.mit.edu -b "OU=users,OU=Moira,DC=WIN,DC=MIT,DC=EDU" "displayName=ga*" displayName cn

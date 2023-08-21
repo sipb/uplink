@@ -247,7 +247,8 @@ class PeopleApiProfileResource(AsyncResource):
                 kerb = get_username(user_id)
                 if not kerb_exists(kerb):
                     raise SynapseError(404, 'kerb does not exist', Codes.NOT_FOUND)
-                displayname = await self.get_name_by_kerb(kerb)
+                # only do this query if needed
+                displayname = await self.get_name_by_kerb(kerb) if query_type != 'avatar_url' else None
                 if displayname is not None:
                     ret['displayname'] = full_display_name(displayname)
             else:
@@ -266,17 +267,8 @@ class PeopleApiProfileResource(AsyncResource):
                     ret['avatar_url'] = avatar_url
 
             # Return depending on the query
-            # TODO: tbh this code could be similified especially due to reusage of names
-            if query_type == 'both':
-                _return_json(ret, request)
-            elif query_type == 'displayname':
-                if 'displayname' not in ret:
-                    raise SynapseError(404, 'display name not found', Codes.NOT_FOUND)
-                _return_json({'displayname': ret['displayname']}, request)
-            elif query_type == 'avatar_url':
-                if 'avatar_url' not in ret:
-                    raise  SynapseError(404, 'profile picture not found', Codes.NOT_FOUND)
-                _return_json({'avatar_url': ret['avatar_url']}, request)
+            # We have guaranteed that it is either {} (expected) or exactly what we want
+            _return_json(ret, request)
         except SynapseError as e:
             request.setResponseCode(e.code)
             _return_json({

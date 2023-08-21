@@ -1,4 +1,5 @@
 from http import HTTPStatus
+from typing import Literal
 from twisted.web.server import Request
 from synapse.module_api import ModuleApi
 from synapse.module_api.errors import ConfigError
@@ -207,6 +208,9 @@ class PeopleApiProfileResource(AsyncResource):
 
     @_wrap_for_html_exceptions
     async def async_render_GET(self, request: Request):
+        query_type: Literal["displayname", "avatar", "both"]
+        ret = {}
+        
         try:
             # get user from GET parameters
             if b'user' not in request.args:
@@ -214,7 +218,17 @@ class PeopleApiProfileResource(AsyncResource):
             user_arg = request.args.get(b'user')
             if len(user_arg) != 1:
                 raise SynapseError(HTTPStatus.BAD_REQUEST, 'why did you give me an array?', Codes.INVALID_PARAM)
-            user_id = user_arg[0].decode()
+            user_id: str = user_arg[0].decode()
+
+            # Get query type (tbh a hack but I'll take it)
+            if user_id.endswith('/displayname'):
+                query_type = 'displayname'
+                user_id = user_id[:-len('/displayname')]
+            elif user_id.endswith('/avatar_url'):
+                query_type = 'avatar'
+                user_id = user_id[:-len('/avatar_url')]
+            else:
+                query_type = 'both'
             
             # based on profile.py in Synapse
             requester = await self.api.get_user_by_req(request)
@@ -230,26 +244,36 @@ class PeopleApiProfileResource(AsyncResource):
                 kerb = get_username(user_id)
                 if not kerb_exists(kerb):
                     raise SynapseError(404, 'kerb does not exist', Codes.NOT_FOUND)
-                ret = {}
                 displayname = await self.get_name_by_kerb(kerb)
                 if displayname is not None:
                     ret['displayname'] = full_display_name(displayname)
-                _return_json(ret, request)
-                return
-            
-            # same as Synapse code
-            profile_handler = self.api._hs.get_profile_handler()
-            # we don't need this check since we don't restrict profile lookups by membership
-            # await profile_handler.check_profile_query_allowed(user, requester_user)
-            displayname = await profile_handler.get_displayname(user)
-            avatar_url = await profile_handler.get_avatar_url(user)
+            else:
+                # same as Synapse code
+                profile_handler = self.api._hs.get_profile_handler()
+                # we don't need this check since we don't restrict profile lookups by membership
+                # await profile_handler.check_profile_query_allowed(user, requester_user)
 
-            ret = {}
-            if displayname is not None:
-                ret['displayname'] = displayname
-            if avatar_url is not None:
-                ret['avatar_url'] = avatar_url
-            _return_json(ret, request)
+                # only do this query if needed
+                displayname = await profile_handler.get_displayname(user) if query_type != 'avatar' else None
+                avatar_url = await profile_handler.get_avatar_url(user) if query_type != 'displayname' else None
+
+                if displayname is not None:
+                    ret['displayname'] = displayname
+                if avatar_url is not None:
+                    ret['avatar_url'] = avatar_url
+
+            # Return depending on the query
+            # TODO: tbh this code could be similified especially due to reusage of names
+            if query_type == 'both':
+                _return_json(ret, request)
+            elif query_type == 'displayname':
+                if 'displayname' not in ret:
+                    raise SynapseError(404, 'display name not found', Codes.NOT_FOUND)
+                _return_json({'displayname': ret['displayname']}, request)
+            elif query_type == 'avatar':
+                if 'avatar_url' not in ret:
+                    raise  SynapseError(404, 'profile picture not found', Codes.NOT_FOUND)
+                _return_json({'avatar_url': ret['avatar_rul']}, request)
         except SynapseError as e:
             request.setResponseCode(e.code)
             _return_json({

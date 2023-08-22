@@ -12,6 +12,8 @@ SIPB Matrix (codename Uplink) is SIPB's effort to bring the [Matrix](https://mat
 
 ## What other repos are part of this project?
 
+* [matrix-react-sdk](https://github.com/gabrc52/matrix-react-sdk/tree/sipb): Fork of the Element logic with 2 small commits, it may or may not be further maintained if we want differences compared to Element, but the goal is to use the upstream version (see `sipb` branch).
+
 * [matrix-synapse-saml-touchstone](https://github.com/gabrc52/matrix-synapse-saml-touchstone): Let people confirm their display name when logging in with Touchstone for the first time.
 
 * [matrix-zephyr-bridge](https://github.com/sipb/matrix-zephyr-bridge): A bridge with Zephyr, an old messaging protocol still used by SIPB alumni

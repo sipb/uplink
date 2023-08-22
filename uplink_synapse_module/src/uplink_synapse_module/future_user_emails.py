@@ -32,7 +32,7 @@ class Config:
 MATRIX_SPIEL_BASE = "Matrix is a free and open source messaging platform. You can chat on " \
     "your laptop by opening {link} on a web browser, or on your phone by downloading " \
     "the {element} app and changing your server to matrix.mit.edu by clicking the \"Edit\" " \
-    "button next to matrix.org."
+    "button next to matrix.org. If prompted, select \"I already have an account\"."
 MATRIX_SPIEL_PLAIN = MATRIX_SPIEL_BASE.format(link='https://matrix.mit.edu', element='Element')
 MATRIX_SPIEL_HTML = MATRIX_SPIEL_BASE.format(
     link='<a href="https://matrix.mit.edu" target="_blank" rel="noopener">matrix.mit.edu</a>',

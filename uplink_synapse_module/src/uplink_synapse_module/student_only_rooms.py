@@ -3,6 +3,9 @@ Interim implementation of student-only rooms.
 
 Long-term we want to make a more general plug-in which also works
 with Moira lists, servers, etc: https://github.com/sipb/uplink/issues/104
+
+oh important note HMMMM. This only works for our own users, not for federated users
+People can still join from other homeservers.
 """
 
 from dataclasses import dataclass
@@ -54,21 +57,32 @@ class UplinkStudentOnlyRooms:
 
     async def is_mit_student(self, user: str) -> bool:
         affiliation = await self.get_affiliation(user)
+        print(f"[uplink_synapse_module] {user}'s affiliation is {affiliation}")
         return affiliation == 'student@mit.edu'
 
     async def user_may_join_room(self, user: str, room: str, is_invited: bool):
+        print("[uplink_synapse_module] user_may_join_room called on", user)
         # We are choosing to use the empty string as state key since we don't need one
         event_key = (EVENT_NAME, '')
         # This callback doesn't directly give us the room state,
         # but we can retrieve it
         state = await self.api.get_room_state(room, [event_key])
+        print("[uplink_synapse_module]", state)
         if event_key not in state:
             # We only care about rooms which are explicitly declared as student-only
+            print("[uplink_synapse_module]", "not declared student-only")
             return NOT_SPAM
 
         # Allow invited users to join if the config says so
         if self.config.allow_invited and is_invited:
+            print("[uplink_synapse_module]", "user was invited, accepting")
             return NOT_SPAM
         if await self.is_mit_student(user):
           return NOT_SPAM
+        
         return Codes.FORBIDDEN
+    
+    # TODO user_may_invite to reflect the same behavior
+    # since we have allow_invited to true, right now we don't care about this case
+    # (inviting anyone is allowed since they can accept the invite)
+    # and we might as well just build the general-case module

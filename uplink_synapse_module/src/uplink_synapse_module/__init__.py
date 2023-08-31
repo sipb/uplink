@@ -1,3 +1,4 @@
 from uplink_synapse_module.first_login import UplinkFirstLoginModule
 from uplink_synapse_module.people_api import PeopleApiSynapseService
 from uplink_synapse_module.future_user_emails import UplinkFutureUserEmailer
+from uplink_synapse_module.student_only_rooms import UplinkStudentOnlyRooms

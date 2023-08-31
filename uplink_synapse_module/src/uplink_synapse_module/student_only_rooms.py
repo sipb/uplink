@@ -12,6 +12,7 @@ from twisted.web.server import Request
 from synapse.module_api import ModuleApi, NOT_SPAM
 from synapse.module_api.errors import ConfigError, Codes
 
+EVENT_NAME = 'edu.mit.sipb.student_only'
 
 @dataclass_json
 @dataclass
@@ -41,11 +42,14 @@ class UplinkStudentOnlyRooms:
         student@mit.edu or None if it cannot be found
         """
         # The function we're calling calls the DB directly (through a helper function).
-        # Also relies on implementation details, but it also means we could use Synapse's
-        # database to store our own stuff
+        # Also relies on implementation details, but it also means we could in theory also use
+        # Synapse's database to store our own stuff without abusing the external ID mapping
         external_ids = await self.api._store.get_external_ids_by_user(user)
         for auth_provider, id in external_ids:
             if auth_provider == 'affiliation':
+                # The second half is superfluous and only exists because we are hacking
+                # the external ID system to store affiliations when it's not what it
+                # was made for (requires unique values since it is for logging in)
                 return id.split('|')[0]
 
     async def is_mit_student(self, user: str) -> bool:
@@ -53,6 +57,15 @@ class UplinkStudentOnlyRooms:
         return affiliation == 'student@mit.edu'
 
     async def user_may_join_room(self, user: str, room: str, is_invited: bool):
+        # We are choosing to use the empty string as state key since we don't need one
+        event_key = (EVENT_NAME, '')
+        # This callback doesn't directly give us the room state,
+        # but we can retrieve it
+        state = await self.api.get_room_state(room, [event_key])
+        if event_key not in state:
+            # We only care about rooms which are explicitly declared as student-only
+            return NOT_SPAM
+
         # Allow invited users to join if the config says so
         if self.config.allow_invited and is_invited:
             return NOT_SPAM

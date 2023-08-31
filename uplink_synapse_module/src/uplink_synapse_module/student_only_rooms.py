@@ -70,7 +70,7 @@ class UplinkStudentOnlyRooms:
             # We only care about rooms which are explicitly declared as student-only
             return NOT_SPAM
         
-        print("[uplink_synapse_module] user_may_join_room called on", user)
+        print("[uplink_synapse_module] user_may_join_room called on", user, "and", room)
         # Allow invited users to join if the config says so
         if self.config.allow_invited and is_invited:
             print("[uplink_synapse_module]", "user was invited, accepting")

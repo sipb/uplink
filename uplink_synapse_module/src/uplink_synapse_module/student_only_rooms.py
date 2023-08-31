@@ -69,6 +69,6 @@ class UplinkStudentOnlyRooms:
         # Allow invited users to join if the config says so
         if self.config.allow_invited and is_invited:
             return NOT_SPAM
-        if self.is_mit_student(user):
+        if await self.is_mit_student(user):
           return NOT_SPAM
         return Codes.FORBIDDEN

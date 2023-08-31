@@ -61,18 +61,16 @@ class UplinkStudentOnlyRooms:
         return affiliation == 'student@mit.edu'
 
     async def user_may_join_room(self, user: str, room: str, is_invited: bool):
-        print("[uplink_synapse_module] user_may_join_room called on", user)
         # We are choosing to use the empty string as state key since we don't need one
         event_key = (EVENT_NAME, '')
         # This callback doesn't directly give us the room state,
         # but we can retrieve it
         state = await self.api.get_room_state(room, [event_key])
-        print("[uplink_synapse_module]", state)
         if event_key not in state:
             # We only care about rooms which are explicitly declared as student-only
-            print("[uplink_synapse_module]", "not declared student-only")
             return NOT_SPAM
-
+        
+        print("[uplink_synapse_module] user_may_join_room called on", user)
         # Allow invited users to join if the config says so
         if self.config.allow_invited and is_invited:
             print("[uplink_synapse_module]", "user was invited, accepting")

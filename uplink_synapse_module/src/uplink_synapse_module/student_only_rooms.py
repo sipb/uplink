@@ -20,6 +20,9 @@ EVENT_NAME = 'edu.mit.sipb.student_only'
 @dataclass_json
 @dataclass
 class Config:
+    # Inviters to ignore the following list for
+    deny_inviters: list[str]
+
     # Allow invited users to join
     allow_invited: bool = True
 
@@ -59,6 +62,12 @@ class UplinkStudentOnlyRooms:
         affiliation = await self.get_affiliation(user)
         print(f"[uplink_synapse_module] {user}'s affiliation is {affiliation}")
         return affiliation == 'student@mit.edu'
+    
+    async def who_invited(self, user: str, room: str) -> bool:
+        event_key = ('m.room.member', user)
+        state = await self.api.get_room_state(room, [event_key])
+        invitation = state[event_key]
+        return invitation.sender
 
     async def user_may_join_room(self, user: str, room: str, is_invited: bool):
         # We are choosing to use the empty string as state key since we don't need one
@@ -72,7 +81,8 @@ class UplinkStudentOnlyRooms:
         
         print("[uplink_synapse_module] user_may_join_room called on", user, "and", room)
         # Allow invited users to join if the config says so
-        if self.config.allow_invited and is_invited:
+        if self.config.allow_invited and is_invited \
+            and await self.who_invited(user, room) not in self.config.deny_inviters:
             print("[uplink_synapse_module]", "user was invited, accepting")
             return NOT_SPAM
         if await self.is_mit_student(user):

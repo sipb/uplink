@@ -2,24 +2,94 @@
 <html>
 
 <head>
+	<meta charset="utf-8">
+	<title>SIPB Matrix</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
 </head>
 
 <body>
+	<section class="section">
+		<div class="block">
+			<h1 class="title">
+				Matrix mobile instructions
+			</h1>
+			<p class="subtitle">
+				Hi, you're on mobile! To use <strong>matrix.mit.edu</strong> on mobile, you can <strong><a
+						id="element-link" href="https://play.google.com/store/apps/details?id=im.vector.app"
+						target="_blank">download the <img src="https://matrix.mit.edu/media/jRbOYeVrDhIksWyNIzoStGZE"
+							width="20em"> Element app</a></strong>.
+			</p>
+		</div>
+		<div class="block" id="invite" hidden>
+			<div class="notification">
+				<!-- TODO: show room name if possible, instead of "a room" - see what matrix.to does! -->
+				<p>You have been invited to chat on <!--strong id="chat-name">a room</strong> on--> Matrix. Once you have the
+					Element app installed, click on the following link.</p>
+				<br />
+				<p><a id="direct-link"><button class="button is-success" id="button" disabled>Tap here to join now</button></a></p>
+			</div>
+		</div>
+		<div class="block">
+			<p>
+				To log in with your Kerberos, you'll need to change the server to <strong>matrix.mit.edu</strong>. The
+				following screenshots may be helpful:
+			</p>
+		</div>
+		<div class="block">
+			<img src="https://matrix-synapse.mit.edu/_matrix/media/v3/download/matrix.mit.edu/GAPTUfmyjDtbsLwBRIUoaJHN"
+				alt="Click on I already have an account">
+			<img src="https://matrix-synapse.mit.edu/_matrix/media/v3/download/matrix.mit.edu/EIbRVahKZPFyDiSYIeIxzevp"
+				alt="Click on edit next to matrix.org">
+		</div>
+		<div class="block">
+			<p>If you wish to use a different client or the link didn't work, go to <a id="matrix-to-link" href=""></a>.
+			</p>
+		</div>
+	</section>
+	<footer class="footer">
+		<div class="content has-text-centered">
+			<p>This is a hosted instance of <a href="https://matrix.org">Matrix</a> brought to you by <a
+					href="https://sipb.mit.edu" target="_blank" rel="noopener">SIPB</a>.</p>
+			<p>Contact: <a href="mailto:matrix@mit.edu">matrix@mit.edu</a></p>
+		</div>
+	</footer>
 </body>
+
 <script>
+	// IMPORTANT TODO
+	// I can't confirm that the iOS URL scheme even works in the first place
+	// check and fix!
+
+	// Change URL if using an Apple product
+	if (navigator.userAgent.includes("iPhone") || navigator.userAgent.includes("iPad")) {
+		document.getElementById("element-link").href = "https://apps.apple.com/us/app/element-messenger/id1083446067";
+	}
+
 	let hash = window.location.hash;
+	let matrixToUrl = "https://matrix.to/";
+	let elementUrl = "element://";
 	if (!hash || hash === "#/welcome") {
-		window.location.replace("/mobile_guide/");
+		// window.location.replace("/mobile_guide/");
 	} else {
+		document.getElementById("invite").hidden = false;
 		if (hash.includes("#/room/")) {
-			hash = hash.replace("#/room/", "#/");
+			matrixToUrl = "https://matrix.to/" + hash.replace("#/room/", "#/");
+			elementUrl = "element://" + hash.replace("#/room/", "room/") + "?via=matrix.mit.edu";
 		}
 		if (hash.includes("#/user/")) {
-			hash = hash.replace("#/user/", "#/");
+			matrixToUrl = "https://matrix.to/" + hash.replace("#/user/", "#/");
+			elementUrl = "element://" + hash.replace("#/user/", "user/") + "?via=matrix.mit.edu";
 		}
-		window.location.replace("https://matrix.to/" + hash);
+		// why does Element use a different URL scheme format among platforms?
+		if (!navigator.userAgent.includes("Android")) {
+			elementUrl = "element://vector/webapp/" + hash + "?via=matrix.mit.edu";
+		}
 	}
+	document.getElementById("matrix-to-link").href = matrixToUrl;
+	document.getElementById("matrix-to-link").innerText = matrixToUrl;
+	document.getElementById("direct-link").href = elementUrl;
+	document.getElementById("button").disabled = false;
 </script>
 
 </html>

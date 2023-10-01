@@ -58,38 +58,47 @@
 </body>
 
 <script>
-	// IMPORTANT TODO
-	// I can't confirm that the iOS URL scheme even works in the first place
-	// check and fix!
+	// TODO: Redirect user back to original URL if not on mobile! Mobile users may choose
+	// to share this link.
+	// Otherwise, use an internal redirect!
+	const isIOS = navigator.userAgent.includes("iPhone") || navigator.userAgent.includes("iPad") || navigator.userAgent.includes("iPod");
+	const isAndroid = navigator.userAgent.includes("Android");
 
 	// Change URL if using an Apple product
-	if (navigator.userAgent.includes("iPhone") || navigator.userAgent.includes("iPad")) {
+	if (isIOS) {
 		document.getElementById("element-link").href = "https://apps.apple.com/us/app/element-messenger/id1083446067";
 	}
 
 	let hash = window.location.hash;
+	// We'll assume the format is #/room/ or #/user/
+	// and transform it to be that if not
+	if (hash.includes("#/#")) hash = hash.replace("#/#", "#/room/#");
+	if (hash.includes("#/%23")) hash = hash.replace("#/%23", "#/room/#");
+	if (hash.includes("#/@")) hash = hash.replace("#/#", "#/user/@");
+	if (hash.includes("#/%40")) hash = hash.replace("#/#", "#/user/@");
+
 	let matrixToUrl = "https://matrix.to/";
-	let elementUrl = "element://";
+	// Android uses element:// URLs to permalink
+	// But non-Android Elements use different schemes
+	let elementUrlScheme = "element://vector/webapp/" + hash + "?via=matrix.mit.edu";
+	// For iOS only
+	let elementIoUrl = "https://app.element.io/" + hash + "?via=matrix.mit.edu";
 	if (!hash || hash === "#/welcome") {
 		// window.location.replace("/mobile_guide/");
 	} else {
 		document.getElementById("invite").hidden = false;
 		if (hash.includes("#/room/")) {
 			matrixToUrl = "https://matrix.to/" + hash.replace("#/room/", "#/");
-			elementUrl = "element://" + hash.replace("#/room/", "room/") + "?via=matrix.mit.edu";
+			if (isAndroid) elementUrlScheme = "element://" + hash.replace("#/room/", "room/") + "?via=matrix.mit.edu";
 		}
 		if (hash.includes("#/user/")) {
 			matrixToUrl = "https://matrix.to/" + hash.replace("#/user/", "#/");
-			elementUrl = "element://" + hash.replace("#/user/", "user/") + "?via=matrix.mit.edu";
-		}
-		// why does Element use a different URL scheme format among platforms?
-		if (!navigator.userAgent.includes("Android")) {
-			elementUrl = "element://vector/webapp/" + hash + "?via=matrix.mit.edu";
+			if (isAndroid) elementUrlScheme = "element://" + hash.replace("#/user/", "user/") + "?via=matrix.mit.edu";
 		}
 	}
 	document.getElementById("matrix-to-link").href = matrixToUrl;
 	document.getElementById("matrix-to-link").innerText = matrixToUrl;
-	document.getElementById("direct-link").href = elementUrl;
+	document.getElementById("direct-link").href = isIOS ? elementIoUrl : elementUrlScheme;
 	document.getElementById("button").disabled = false;
 </script>
 

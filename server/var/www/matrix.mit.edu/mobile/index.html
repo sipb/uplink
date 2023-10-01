@@ -74,8 +74,8 @@
 	// and transform it to be that if not
 	if (hash.includes("#/#")) hash = hash.replace("#/#", "#/room/#");
 	if (hash.includes("#/%23")) hash = hash.replace("#/%23", "#/room/#");
-	if (hash.includes("#/@")) hash = hash.replace("#/#", "#/user/@");
-	if (hash.includes("#/%40")) hash = hash.replace("#/#", "#/user/@");
+	if (hash.includes("#/@")) hash = hash.replace("#/@", "#/user/@");
+	if (hash.includes("#/%40")) hash = hash.replace("#/%40", "#/user/@");
 
 	let matrixToUrl = "https://matrix.to/";
 	// Android uses element:// URLs to permalink

@@ -23,3 +23,5 @@ SIPB Matrix (codename Uplink) is SIPB's effort to bring the [Matrix](https://mat
 * [uplink-moira-bot](https://github.com/sipb/uplink-moira-bot): Another deprecated attempt to build a Moira integration. It uses the deprecated Moira API we are not supposed to use.
 
 * [moira-rest-api](https://github.com/gabrc52/moira-rest-api): A new full RESTful API to interact with Moira, useful for SIPB projects or projects at MIT in general.
+
+* [class_group_chats](https://github.com/gabrc52/class_group_chats/): Web app to join group chats for your classes

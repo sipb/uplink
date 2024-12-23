@@ -1,8 +1,17 @@
 {
-	"Integrations not allowed": {
+	"integrations|impossible_dialog_title": {
 		"en": "Integrations are a work in progress."
 	},
-	"Your %(brand)s doesn't allow you to use an integration manager to do this. Please contact an admin.": {
+	"integrations|impossible_dialog_description": {
 		"en": "If you wish to invite bots or add widgets, you can add them manually. Ask in #help:matrix.mit.edu or email matrix@mit.edu letting us know what bot or widget you need and we can guide you."
+	},
+	"create_room|encrypted_warning": {
+		"en": "You can't disable this later. We recommend you disable it for semi-public rooms and enable it for private conversations."
+	},
+	"invite|name_email_mxid_share_room": {
+		"en": "Invite someone using their name or kerberos (without @mit.edu). If they do not appear in the search results, please use the Matrix username format—<userId/>—instead of the full email address. You can also invite non-MIT people using their Matrix username or email address, or <a>right click here and share the room link</a>."
+	},
+	"invite|name_email_mxid_share_space": {
+		"en": "Invite someone using their name or kerberos (without @mit.edu). If they do not appear in the search results, please use the Matrix username format—<userId/>—instead of the full email address. You can also invite non-MIT people using their Matrix username or email address, or <a>right click here and share the space link</a>."
 	}
 }

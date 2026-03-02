@@ -26,9 +26,9 @@
         "feature_custom_themes": true,
         "feature_thread": true,
         "feature_video_rooms": true,
-	"feature_exploring_public_spaces": true,
-	"feature_ask_to_join": false,
-	"feature_render_reaction_images": true
+        "feature_exploring_public_spaces": true,
+        "feature_ask_to_join": false,
+        "feature_render_reaction_images": true
     },
     "default_federate": true,
     "room_directory": {
